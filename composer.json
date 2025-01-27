@@ -1,0 +1,44 @@
+{
+    "name": "mariojgt/witchcraft",
+    "description": "A Laravel Package Witchcraft, a quick start for new laravel Packages",
+    "keywords": [
+        "laravel",
+        "Media library",
+        "Tailwind",
+        "vue js",
+        "library",
+        "Media"
+    ],
+    "type": "laravel",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mario Jose Goes Tarosso",
+            "email": "mariojgt2@gmail.com"
+        }
+    ],
+    "require":{
+        "php": "^8.0",
+        "intervention/image": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Mariojgt\\Witchcraft\\": "src"
+        }
+    },
+
+    "scripts": {
+        "post-autoload-dump": [
+            "@php artisan route:list"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mariojgt\\Witchcraft\\WitchcraftProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
