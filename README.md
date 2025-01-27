@@ -131,6 +131,3 @@ This package is open-sourced software licensed under the [MIT license](LICENSE.m
 - [Mario Tarosso](https://github.com/mariojgt)
 - [All Contributors](../../contributors)
 
-## Support
-
-If you discover any security-related issues, please email mario.junior.dev@gmail.com instead of using the issue tracker.
