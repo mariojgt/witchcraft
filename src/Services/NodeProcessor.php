@@ -10,12 +10,12 @@ class NodeProcessor
 {
     protected $variables = [];
 
-    public function processNode($node, $inputData = [])
+    public function processNode($node, $inputData = null)
     {
         $this->variables = $inputData;
 
         return match ($node['type']) {
-            'variable' => $this->processVariableNode($node),
+            'variable' => $this->processVariableNode($node, $inputData),
             'api' => $this->processApiNode($node),
             'if' => $this->processConditionNode($node),
             'notification' => $this->processNotificationNode($node),
@@ -26,10 +26,14 @@ class NodeProcessor
         };
     }
 
-    protected function processVariableNode($node)
+    protected function processVariableNode($node, $inputData)
     {
         $outputKey = $node['data']['outputKey'];
-        $value = $node['data']['initialValue'];
+        if (empty(reset($inputData))) {
+            $value = $node['data']['initialValue'] ?? null;
+        } else {
+            $value = reset($inputData);
+        }
 
         return [
             'success' => true,
@@ -41,26 +45,108 @@ class NodeProcessor
     protected function processApiNode($node)
     {
         try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->request($node['data']['method'], $node['data']['url'], [
-                'headers' => json_decode($node['data']['headers'] ?? '{}', true),
-                'json' => json_decode($node['data']['body'] ?? '{}', true)
-            ]);
+            // Prepare request details
+            $requestType = $node['data']['requestType'] ?? 'external';
+            $method = $node['data']['method'];
+            $url = $node['data']['url'];
+            $saveResponse = $node['data']['saveResponse'] ?? true;
+            $authenticatedRequest = $node['data']['authenticatedRequest'] ?? false;
 
-            $result = json_decode($response->getBody(), true);
+            // Parse parameters and body
+            $params = json_decode($node['data']['params'] ?? '{}', true);
+            $body = json_decode($node['data']['body'] ?? '{}', true);
+            $headers = json_decode($node['data']['headers'] ?? '{}', true);
 
+            // Prepare request options
+            $requestOptions = [
+                'headers' => $headers,
+                'verify' => false // Disable SSL verification (use cautiously)
+            ];
+
+            // Add body for methods that support it
+            if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
+                $requestOptions['json'] = $body;
+            }
+
+            // Handle authenticated requests
+            if ($authenticatedRequest) {
+                $headers['Authorization'] = 'Bearer ' . auth()->tokenById(auth()->id());
+                $requestOptions['headers'] = $headers;
+            }
+
+            // Handle request types
+            if ($requestType === 'internal') {
+                // Internal route handling
+                try {
+                    // Use Laravel's route resolution
+                    $routeParams = array_merge($params, $body);
+                    $response = $this->executeInternalRoute($url, $method, $routeParams);
+
+                    $result = $response instanceof JsonResponse
+                        ? $response->getData(true)
+                        : json_decode($response->getContent(), true);
+                } catch (\Exception $e) {
+                    throw new \Exception("Internal route error: " . $e->getMessage());
+                }
+            } else {
+                // External API request
+                $client = new \GuzzleHttp\Client();
+
+                // Add query parameters for GET requests
+                if ($method === 'GET' && !empty($params)) {
+                    $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($params);
+                }
+
+                $response = $client->request($method, $url, $requestOptions);
+                $result = json_decode($response->getBody(), true);
+            }
+
+            // Prepare output
             return [
                 'success' => true,
-                'output' => $node['data']['saveResponse'] ? ['apiResponse' => $result] : [],
-                'message' => "API call successful"
+                'output' => $saveResponse ? ['apiResponse' => $result] : [],
+                'message' => "API {$requestType} request successful",
+                'requestDetails' => [
+                    'method' => $method,
+                    'url' => $url,
+                    'params' => $params,
+                    'body' => $body
+                ]
             ];
         } catch (\Exception $e) {
             return [
                 'success' => false,
                 'output' => [],
-                'message' => "API call failed: {$e->getMessage()}"
+                'message' => "API request failed: " . $e->getMessage(),
+                'error' => [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]
             ];
         }
+    }
+
+    // Helper method to execute internal routes
+    protected function executeInternalRoute($routeName, $method, $params)
+    {
+        // Resolve the route
+        $route = Route::getRoutes()->getByName($routeName);
+
+        if (!$route) {
+            throw new \Exception("Route not found: {$routeName}");
+        }
+
+        // Create a request
+        $request = Request::create(
+            $route->uri(),
+            strtoupper($method),
+            $params
+        );
+
+        // Dispatch the request through the kernel
+        $response = app()->handle($request);
+
+        return $response;
     }
 
     protected function processConditionNode($node)
@@ -72,6 +158,7 @@ class NodeProcessor
                 // Get the first variable from the input data since variableName is not provided
                 $actualValue = count($this->variables) > 0 ? reset($this->variables) : null;
             }
+
             // TODO handle this is a better way for different types of nodes
             $expectedValue = $node['data']['expectedValue'] ?? null;
 

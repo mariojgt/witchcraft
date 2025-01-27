@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Mariojgt\Witchcraft\Controllers\HomeContoller;
+use Mariojgt\Witchcraft\Controllers\Node\ApiController;
 use Mariojgt\Witchcraft\Controllers\FlowDiagramController;
 use Mariojgt\Witchcraft\Controllers\Node\ModelSelectController;
 
