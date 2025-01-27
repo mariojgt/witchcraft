@@ -4,6 +4,9 @@
 
 Witchcraft is a powerful Laravel package that provides a visual workflow automation system, allowing developers and non-technical users to create complex workflows using a node-based interface.
 
+
+[![alt text](https://img.youtube.com/vi/HiZdWxRaxxQ/0.jpg)](https://www.youtube.com/watch?v=HiZdWxRaxxQ)
+
 ## Features
 
 - 🔧 Visual Workflow Editor
