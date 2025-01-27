@@ -1,15 +1,113 @@
 {
+  "_bell-BT1XGeWr.js": {
+    "file": "assets/bell-BT1XGeWr.js",
+    "name": "bell",
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ]
+  },
+  "_database-B3566tSv.js": {
+    "file": "assets/database-B3566tSv.js",
+    "name": "database",
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/ApiNode.vue": {
+    "file": "assets/ApiNode-CfCr7rGS.js",
+    "name": "ApiNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/ApiNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js",
+      "_database-B3566tSv.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/ArtisanNode.vue": {
+    "file": "assets/ArtisanNode-CPszdfx2.js",
+    "name": "ArtisanNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/ArtisanNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/IfNode.vue": {
+    "file": "assets/IfNode-D0fSfWPP.js",
+    "name": "IfNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/IfNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/ModelSelectNode.vue": {
+    "file": "assets/ModelSelectNode-B8Xa41cJ.js",
+    "name": "ModelSelectNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/ModelSelectNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js",
+      "_bell-BT1XGeWr.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/NotificationNode.vue": {
+    "file": "assets/NotificationNode-DsXf6xDT.js",
+    "name": "NotificationNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/NotificationNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js",
+      "_bell-BT1XGeWr.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/ParseJsonNode.vue": {
+    "file": "assets/ParseJsonNode-KKLoNR0s.js",
+    "name": "ParseJsonNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/ParseJsonNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ]
+  },
+  "node_modules/witchcraft-vs/src/components/nodes/VariableNode.vue": {
+    "file": "assets/VariableNode-C2pUMfR2.js",
+    "name": "VariableNode",
+    "src": "node_modules/witchcraft-vs/src/components/nodes/VariableNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js",
+      "_database-B3566tSv.js"
+    ]
+  },
   "resources/vendor/Witchcraft/js/vue.js": {
-    "file": "assets/vue-D6mxO582.js",
+    "file": "assets/vue-Cu3LfjCu.js",
     "name": "vue",
     "src": "resources/vendor/Witchcraft/js/vue.js",
     "isEntry": true,
+    "dynamicImports": [
+      "node_modules/witchcraft-vs/src/components/nodes/ApiNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ArtisanNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/IfNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ModelSelectNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/NotificationNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ParseJsonNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/VariableNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ApiNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ArtisanNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/IfNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ModelSelectNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/NotificationNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/ParseJsonNode.vue",
+      "node_modules/witchcraft-vs/src/components/nodes/VariableNode.vue"
+    ],
     "css": [
-      "assets/vue-YFrjvVjE.css"
+      "assets/vue-rO2LoOtD.css"
     ]
   },
   "resources/vendor/Witchcraft/sass/app.scss": {
-    "file": "assets/css-BbgV_s54.css",
+    "file": "assets/css-l0sNRNKZ.js",
+    "name": "css",
     "src": "resources/vendor/Witchcraft/sass/app.scss",
     "isEntry": true
   }
