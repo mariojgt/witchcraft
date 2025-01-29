@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Witchcraft\Handlers;
+
+use Mariojgt\Witchcraft\Contracts\NodeHandlerInterface;
+
+class {{className}} implements NodeHandlerInterface
+{
+    public function handle(array $nodeData, array $variables): array
+    {
+        try {
+            // Add your node processing logic here
+            // Example: process $nodeData['example'] or other properties
+
+            return [
+                'success' => true,
+                'output' => [
+                    // The output key should match what you defined in your node component
+                    $nodeData['outputKey'] => 'Your processed value here'
+                ],
+                'message' => '{{className}} processed successfully'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => [],
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function getMetadata(): array
+    {
+        return [
+            'type' => '{{nodeType}}',
+            'category' => 'Custom',
+            'icon' => 'BoxIcon',
+            'label' => '{{className}}',
+            'component' => '{{componentName}}',
+            'initialData' => [
+                'outputKey' => 'customOutput',
+                'example' => 'value'
+            ]
+        ];
+    }
+}

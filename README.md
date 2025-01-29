@@ -114,6 +114,12 @@ Publish the configuration file to customize package behavior:
 php artisan vendor:publish --tag="witchcraft-config"
 ```
 
+## Create Custom nodes
+
+```bash
+php artisan witchcraft:make-node Test --category=Testing
+```
+
 ## Contributing
 
 1. Fork the repository

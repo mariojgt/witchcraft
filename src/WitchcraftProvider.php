@@ -4,8 +4,9 @@ namespace Mariojgt\Witchcraft;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use Mariojgt\Witchcraft\Commands\Republish;
 use Mariojgt\Witchcraft\Commands\Install;
+use Mariojgt\Witchcraft\Commands\Republish;
+use Mariojgt\Witchcraft\Commands\MakeNodeCommand;
 
 class WitchcraftProvider extends ServiceProvider
 {
@@ -22,6 +23,7 @@ class WitchcraftProvider extends ServiceProvider
             $this->commands([
                 Republish::class,
                 Install::class,
+                MakeNodeCommand::class,
             ]);
         }
 

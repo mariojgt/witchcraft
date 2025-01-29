@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Mariojgt\Witchcraft\Controllers\HomeContoller;
+use Mariojgt\Witchcraft\Controllers\NodeController;
 use Mariojgt\Witchcraft\Controllers\Node\ApiController;
 use Mariojgt\Witchcraft\Controllers\FlowDiagramController;
 use Mariojgt\Witchcraft\Controllers\Node\ModelSelectController;
@@ -25,4 +26,5 @@ Route::group([
 
     Route::get('/models', [ModelSelectController::class, 'getModels']);
     Route::get('/models/{modelName}/fields', [ModelSelectController::class, 'getFields']);
+    Route::get('/witchcraft/nodes', [NodeController::class, 'getAvailableNodes']);
 });

@@ -14,8 +14,18 @@ class NodeProcessor
     {
         $this->variables = $inputData;
 
+        // First, try to find a custom handler
+        $handlerClass = $this->getCustomNodeHandler($node['type']);
+
+        if ($handlerClass && class_exists($handlerClass)) {
+            // Process using custom handler
+            $handler = new $handlerClass();
+            return $handler->handle($node['data'], $this->variables);
+        }
+
+        // If no custom handler found, process using default handlers
         return match ($node['type']) {
-            'variable' => $this->processVariableNode($node, $inputData),
+            'trigger' => $this->processTriggerNode($node, $inputData),
             'api' => $this->processApiNode($node),
             'if' => $this->processConditionNode($node),
             'notification' => $this->processNotificationNode($node),
@@ -26,7 +36,29 @@ class NodeProcessor
         };
     }
 
-    protected function processVariableNode($node, $inputData)
+    protected function getCustomNodeHandler($type)
+    {
+        // Convert kebab-case or any other format to StudlyCase
+        $handlerName = str_replace(['-', '_'], ' ', $type);
+        $handlerName = ucwords($handlerName);
+        $handlerName = str_replace(' ', '', $handlerName);
+
+        // Try both namespaces (for flexibility)
+        $possibleHandlers = [
+            "App\\Witchcraft\\Handlers\\{$handlerName}Handler",
+            "App\\Witchcraft\\Handlers\\{$handlerName}NodeHandler"
+        ];
+
+        foreach ($possibleHandlers as $handler) {
+            if (class_exists($handler)) {
+                return $handler;
+            }
+        }
+
+        return null;
+    }
+
+    protected function processTriggerNode($node, $inputData)
     {
         $outputKey = $node['data']['outputKey'];
         if (empty(reset($inputData))) {
@@ -37,7 +69,10 @@ class NodeProcessor
 
         return [
             'success' => true,
-            'output' => [$outputKey => $value],
+            'output' => [
+                $outputKey => $value,
+                'extractedValue' => $value
+            ],
             'message' => "Variable {$outputKey} set to {$value}"
         ];
     }
@@ -152,12 +187,7 @@ class NodeProcessor
     protected function processConditionNode($node)
     {
         try {
-            if (isset($this->variables['modelEvent'])) {
-                $actualValue = $this->variables['extractedValue'];
-            } else {
-                // Get the first variable from the input data since variableName is not provided
-                $actualValue = count($this->variables) > 0 ? reset($this->variables) : null;
-            }
+            $actualValue = $this->variables['extractedValue'] ?? null;
 
             // TODO handle this is a better way for different types of nodes
             $expectedValue = $node['data']['expectedValue'] ?? null;
@@ -292,33 +322,17 @@ class NodeProcessor
             ];
         }
 
-        // Extract value using the JSON path
-        $extractedValue = $this->extractValueFromPath($sourceJson, $jsonPath);
+        // Use Laravel's data_get helper to extract nested values
+        $extractedValue = data_get($sourceJson, $jsonPath);
 
         return [
             'success' => true,
             'output' => [
-                $outputKey => $extractedValue
+                $outputKey => $extractedValue,
+                'extractedValue' => $extractedValue
             ],
             'message' => "Extracted {$jsonPath} from {$sourceVariable}"
         ];
-    }
-
-    // Helper method to extract nested values
-    protected function extractValueFromPath($data, $path)
-    {
-        $keys = explode('.', $path);
-        $value = $data;
-
-        foreach ($keys as $key) {
-            if (is_array($value) && isset($value[$key])) {
-                $value = $value[$key];
-            } else {
-                return null;
-            }
-        }
-
-        return $value;
     }
 
     protected function processArtisanNode($node)
