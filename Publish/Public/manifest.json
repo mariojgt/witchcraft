@@ -1,6 +1,13 @@
 {
+  "_x-Bt5pDMAJ.js": {
+    "file": "assets/x-Bt5pDMAJ.js",
+    "name": "x",
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ]
+  },
   "repo/witchcraft-node/src/components/nodes/ApiNode.vue": {
-    "file": "assets/ApiNode-BX7F9Enm.js",
+    "file": "assets/ApiNode-BpbWkx0k.js",
     "name": "ApiNode",
     "src": "repo/witchcraft-node/src/components/nodes/ApiNode.vue",
     "isDynamicEntry": true,
@@ -9,7 +16,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/ArtisanNode.vue": {
-    "file": "assets/ArtisanNode-D16mwRFd.js",
+    "file": "assets/ArtisanNode-CYayQx4L.js",
     "name": "ArtisanNode",
     "src": "repo/witchcraft-node/src/components/nodes/ArtisanNode.vue",
     "isDynamicEntry": true,
@@ -18,7 +25,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/IfNode.vue": {
-    "file": "assets/IfNode-BNOlizvn.js",
+    "file": "assets/IfNode-DNolL-EK.js",
     "name": "IfNode",
     "src": "repo/witchcraft-node/src/components/nodes/IfNode.vue",
     "isDynamicEntry": true,
@@ -27,7 +34,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/ModelSelectNode.vue": {
-    "file": "assets/ModelSelectNode-Csvh64iX.js",
+    "file": "assets/ModelSelectNode-BQJSMTvI.js",
     "name": "ModelSelectNode",
     "src": "repo/witchcraft-node/src/components/nodes/ModelSelectNode.vue",
     "isDynamicEntry": true,
@@ -36,7 +43,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/NotificationNode.vue": {
-    "file": "assets/NotificationNode-DBTHfDGC.js",
+    "file": "assets/NotificationNode-Dtxe_0Wt.js",
     "name": "NotificationNode",
     "src": "repo/witchcraft-node/src/components/nodes/NotificationNode.vue",
     "isDynamicEntry": true,
@@ -45,7 +52,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/ParseJsonNode.vue": {
-    "file": "assets/ParseJsonNode-BBl61tBJ.js",
+    "file": "assets/ParseJsonNode-BbCURob6.js",
     "name": "ParseJsonNode",
     "src": "repo/witchcraft-node/src/components/nodes/ParseJsonNode.vue",
     "isDynamicEntry": true,
@@ -54,7 +61,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/SwitchCaseNode.vue": {
-    "file": "assets/SwitchCaseNode-BWAOVx3E.js",
+    "file": "assets/SwitchCaseNode-BEXUw81G.js",
     "name": "SwitchCaseNode",
     "src": "repo/witchcraft-node/src/components/nodes/SwitchCaseNode.vue",
     "isDynamicEntry": true,
@@ -63,7 +70,7 @@
     ]
   },
   "repo/witchcraft-node/src/components/nodes/TriggerNode.vue": {
-    "file": "assets/TriggerNode-CrHsagxF.js",
+    "file": "assets/TriggerNode-BRJ_ExAW.js",
     "name": "TriggerNode",
     "src": "repo/witchcraft-node/src/components/nodes/TriggerNode.vue",
     "isDynamicEntry": true,
@@ -72,16 +79,27 @@
     ]
   },
   "resources/js/witchcraft/nodes/ProcessOrderNode.vue": {
-    "file": "assets/ProcessOrderNode-BmyNe1oY.js",
+    "file": "assets/ProcessOrderNode-CY58gxa1.js",
     "name": "ProcessOrderNode",
     "src": "resources/js/witchcraft/nodes/ProcessOrderNode.vue",
     "isDynamicEntry": true,
     "imports": [
-      "resources/vendor/Witchcraft/js/vue.js"
+      "resources/vendor/Witchcraft/js/vue.js",
+      "_x-Bt5pDMAJ.js"
+    ]
+  },
+  "resources/js/witchcraft/nodes/TestNode.vue": {
+    "file": "assets/TestNode-CDrEzSGd.js",
+    "name": "TestNode",
+    "src": "resources/js/witchcraft/nodes/TestNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js",
+      "_x-Bt5pDMAJ.js"
     ]
   },
   "resources/vendor/Witchcraft/js/vue.js": {
-    "file": "assets/vue-DMxFRkQw.js",
+    "file": "assets/vue-BA_kCxex.js",
     "name": "vue",
     "src": "resources/vendor/Witchcraft/js/vue.js",
     "isEntry": true,
@@ -95,6 +113,7 @@
       "repo/witchcraft-node/src/components/nodes/SwitchCaseNode.vue",
       "repo/witchcraft-node/src/components/nodes/TriggerNode.vue",
       "resources/js/witchcraft/nodes/ProcessOrderNode.vue",
+      "resources/js/witchcraft/nodes/TestNode.vue",
       "repo/witchcraft-node/src/components/nodes/ApiNode.vue",
       "repo/witchcraft-node/src/components/nodes/ArtisanNode.vue",
       "repo/witchcraft-node/src/components/nodes/IfNode.vue",
@@ -103,7 +122,8 @@
       "repo/witchcraft-node/src/components/nodes/ParseJsonNode.vue",
       "repo/witchcraft-node/src/components/nodes/SwitchCaseNode.vue",
       "repo/witchcraft-node/src/components/nodes/TriggerNode.vue",
-      "resources/js/witchcraft/nodes/ProcessOrderNode.vue"
+      "resources/js/witchcraft/nodes/ProcessOrderNode.vue",
+      "resources/js/witchcraft/nodes/TestNode.vue"
     ],
     "css": [
       "assets/vue-CYuqOiAD.css"
