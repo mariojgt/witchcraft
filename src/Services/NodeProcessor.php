@@ -252,7 +252,8 @@ class NodeProcessor
                 'output' => [
                     'switchValue' => $switchExpression,
                     'selectedCase' => $selectedCase,
-                    'matchedValue' => $cases[$selectedCase]['value']
+                    'matchedValue' => $cases[$selectedCase]['value'],
+                    'expectedValue' => $cases[$selectedCase]['value']
                 ],
                 'message' => sprintf(
                     "Switch evaluated: %s matched case %s",
