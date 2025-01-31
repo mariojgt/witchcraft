@@ -26,5 +26,4 @@ Route::group([
 
     Route::get('/models', [ModelSelectController::class, 'getModels']);
     Route::get('/models/{modelName}/fields', [ModelSelectController::class, 'getFields']);
-    Route::get('/witchcraft/nodes', [NodeController::class, 'getAvailableNodes']);
 });

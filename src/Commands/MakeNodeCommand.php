@@ -76,7 +76,7 @@ class MakeNodeCommand extends Command
             $stub
         );
 
-        $path = resource_path("js/witchcraft/nodes/{$componentName}.vue");
+        $path = resource_path("vendor/Witchcraft/js/vue_components/src/components/nodes/{$componentName}.vue");
         file_put_contents($path, $content);
     }
 }

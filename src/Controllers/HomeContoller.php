@@ -12,6 +12,11 @@ class HomeContoller extends Controller
 {
     public function index()
     {
+        // WitchcraftTrigger::execute(19, collect([
+        //     'user' => 'teste',
+        //     'random' => collect([1, 2, 3, 4, 5])
+        // ])->toArray());
+        // dd('here');
         // Render the witchcraft view
         return view('witchcraft::content.index');
     }

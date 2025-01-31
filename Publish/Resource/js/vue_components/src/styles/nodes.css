@@ -1,0 +1,38 @@
+/* src/styles/nodes.css */
+.workflow-node {
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background: white;
+    min-width: 150px;
+   }
+
+   .node-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+   }
+
+   .node-content {
+    padding: 8px 0;
+   }
+
+   .node-handles {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+   }
+
+   /* Node-specific styles */
+   .if-node { background: #f0f7ff; }
+   .api-node { background: #f0fff4; }
+   .notification-node { background: #fff0f4; }
+
+   /* Handle styles */
+   .handle {
+    width: 8px;
+    height: 8px;
+    background: #555;
+    border-radius: 50%;
+   }
