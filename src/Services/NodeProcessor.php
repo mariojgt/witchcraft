@@ -28,6 +28,7 @@ class NodeProcessor
             'trigger' => $this->processTriggerNode($node, $inputData),
             'api' => $this->processApiNode($node),
             'if' => $this->processConditionNode($node),
+            'switchcase' => $this->processSwitchNode($node),
             'notification' => $this->processNotificationNode($node),
             'modelselect' => $this->processModelSelectNode($node),
             'parsejson' => $this->processJsonExtractNode($node),
@@ -216,6 +217,54 @@ class NodeProcessor
                 'success' => false,
                 'output' => [],
                 'message' => "Condition evaluation failed: " . $e->getMessage()
+            ];
+        }
+    }
+
+    protected function processSwitchNode($node)
+    {
+        try {
+            $switchExpression = $this->variables['extractedValue'] ?? null;
+            $cases = $node['data']['cases'];
+
+            // Find matching case
+            $selectedCase = null;
+            foreach ($cases as $index => $case) {
+                // Skip default case (last one)
+                if ($index === count($cases) - 1) {
+                    continue;
+                }
+
+                if ((string)$case['value'] === (string)$switchExpression) {
+                    $selectedCase = $index;
+                    break;
+                }
+            }
+
+            // If no case matches, use default (last case)
+            if ($selectedCase === null) {
+                $selectedCase = count($cases) - 1;
+            }
+
+            return [
+                'success' => true,
+                'selectedCase' => $selectedCase,
+                'output' => [
+                    'switchValue' => $switchExpression,
+                    'selectedCase' => $selectedCase,
+                    'matchedValue' => $cases[$selectedCase]['value']
+                ],
+                'message' => sprintf(
+                    "Switch evaluated: %s matched case %s",
+                    $switchExpression,
+                    $cases[$selectedCase]['value']
+                )
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'output' => [],
+                'message' => "Switch evaluation failed: " . $e->getMessage()
             ];
         }
     }
