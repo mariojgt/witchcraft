@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
-import ReactivityTransform from '@vue-macros/reactivity-transform/vite';
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [
-    ReactivityTransform(),
+    tailwindcss(),
     laravel({
       input: [
         'resources/vendor/Witchcraft/js/vue.js',

@@ -1,240 +1,238 @@
+/* ALL @import statements MUST be at the very top */
 @import "tailwindcss";
 @import "@vue-flow/core/dist/style.css";
 @import "@vue-flow/core/dist/theme-default.css";
 
 /* Base styles */
 html, body, #app {
- margin: 0;
- height: 100%;
- background: #1a1a1a;
+  margin: 0;
+  height: 100%;
+  background: #0a0a0a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .vue-flow {
- background: #1e1e1e;
- background-image:
-   radial-gradient(#2a2a2a 1px, transparent 1px),
-   radial-gradient(#2a2a2a 1px, transparent 1px);
- background-size: 20px 20px;
+  background: #0a0a0a;
+  background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
-/* Nodes */
+/* Fast, smooth nodes */
 .vue-flow__node {
- min-width: 150px;
- border-radius: 8px;
- background: rgba(30, 30, 30, 0.95);
- border: 1px solid rgba(100, 100, 255, 0.3);
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
- backdrop-filter: blur(8px);
+  min-width: 200px;
+  border-radius: 8px;
+  background: #111111;
+  border: 1px solid #333333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: 14px;
+  will-change: transform;
+  transform: translateZ(0); /* Enable hardware acceleration */
 }
 
 .vue-flow__node:hover {
- border-color: rgba(100, 100, 255, 0.6);
- transform: translateY(-2px);
- transition: all 0.3s ease;
+  border-color: #4a5568;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-/* Edges */
+/* Simple selection state */
+.vue-flow__node.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Prevent double-click on text fields from affecting nodes */
+.vue-flow__node input,
+.vue-flow__node textarea,
+.vue-flow__node select {
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.vue-flow__node input:focus,
+.vue-flow__node textarea:focus,
+.vue-flow__node select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+/* Clean edges */
 .vue-flow__edge-path {
- stroke: rgba(100, 100, 255, 0.6);
- stroke-width: 2;
- filter: drop-shadow(0 0 8px rgba(100, 100, 255, 0.4));
+  stroke: #4a5568;
+  stroke-width: 2;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+.vue-flow__edge:hover .vue-flow__edge-path {
+  stroke: #6b7280;
+  stroke-width: 2.5;
 }
 
 .vue-flow__edge.selected .vue-flow__edge-path {
- stroke: rgba(100, 200, 255, 0.8);
- stroke-width: 3;
+  stroke: #3b82f6;
+  stroke-width: 3;
 }
 
-/* Connection lines animation */
-.vue-flow__edges path {
- stroke-dasharray: 10;
- animation: flowingLine 1.5s linear infinite;
-}
-
-@keyframes flowingLine {
- from {
-   stroke-dashoffset: 20;
- }
- to {
-   stroke-dashoffset: 0;
- }
-}
-
-/* Connection handles */
+/* Bigger, more accessible connection handles */
 .vue-flow__handle {
- width: 20px;
- height: 20px;
- border-radius: 6px;
- background: rgba(30, 30, 30, 0.95);
- border: 2px solid rgba(100, 100, 255, 0.6);
- box-shadow: 0 0 8px rgba(100, 100, 255, 0.4);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4a5568;
+  border: 2px solid #111111;
+  transition: all 0.15s ease;
+  cursor: pointer;
 }
 
 .vue-flow__handle:hover {
- background: rgba(100, 100, 255, 0.3);
- transition: all 0.2s ease;
+  /* transform: scale(1.25); */
+  background: #6366f1;
+  border-color: #ffffff;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
 }
 
-/* States */
-.vue-flow__node.processing {
- border-color: rgba(100, 200, 255, 0.8);
- box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
- animation: pulse 1.5s infinite;
+/* Source and target handle styling */
+.vue-flow__handle-source {
+  background: #10b981;
 }
 
-.vue-flow__node.completed {
- border-color: rgba(100, 255, 100, 0.8);
- box-shadow: 0 0 20px rgba(100, 255, 100, 0.4);
+.vue-flow__handle-target {
+  background: #f59e0b;
 }
 
-@keyframes pulse {
- 0% {
-   box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
- }
- 50% {
-   box-shadow: 0 0 30px rgba(100, 200, 255, 0.6);
- }
- 100% {
-   box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
- }
-}
-
-.vue-flow__node {
-    transition: all 0.3s ease !important;
-}
-
+/* Minimal simulation states */
 .simulation-mode .vue-flow__node {
-    opacity: 0.5 !important;
-}
-
-.vue-flow__node.simulation-node {
-    opacity: 0.5;
+  opacity: 0.6;
 }
 
 .vue-flow__node.current {
-    opacity: 1 !important;
-    z-index: 9999 !important;
-    background-color: rgba(66, 153, 225, 0.1) !important;
-    border: 3px solid #4299e1 !important;
+  opacity: 1 !important;
+  border-color: #3b82f6 !important;
+  box-shadow:
+    0 0 0 2px rgba(59, 130, 246, 0.4),
+    0 0 12px rgba(59, 130, 246, 0.3) !important;
+  animation: currentPulse 2s ease-in-out infinite;
+}
+
+@keyframes currentPulse {
+  0%, 100% {
     box-shadow:
-        0 0 0 4px rgba(66, 153, 225, 0.2),
-        0 0 20px rgba(66, 153, 225, 0.4),
-        0 0 40px rgba(66, 153, 225, 0.2) !important;
-    animation: nodeGlow 1.5s ease-in-out infinite !important;
-}
-
-@keyframes nodeGlow {
-    0%, 100% {
-        box-shadow:
-            0 0 0 4px rgba(66, 153, 225, 0.2),
-            0 0 20px rgba(66, 153, 225, 0.4),
-            0 0 40px rgba(66, 153, 225, 0.2);
-    }
-    50% {
-        box-shadow:
-            0 0 0 6px rgba(66, 153, 225, 0.3),
-            0 0 30px rgba(66, 153, 225, 0.5),
-            0 0 50px rgba(66, 153, 225, 0.3);
-    }
-}
-
-@keyframes nodePulse {
-    0% {
-        transform: scale(1.1) !important;
-        box-shadow:
-            0 0 0 4px rgba(66, 153, 225, 0.2),
-            0 0 20px rgba(66, 153, 225, 0.4),
-            0 0 40px rgba(66, 153, 225, 0.2);
-    }
-    50% {
-        transform: scale(1.15) !important;
-        box-shadow:
-            0 0 0 6px rgba(66, 153, 225, 0.3),
-            0 0 30px rgba(66, 153, 225, 0.5),
-            0 0 50px rgba(66, 153, 225, 0.3);
-    }
-    100% {
-        transform: scale(1.1) !important;
-        box-shadow:
-            0 0 0 4px rgba(66, 153, 225, 0.2),
-            0 0 20px rgba(66, 153, 225, 0.4),
-            0 0 40px rgba(66, 153, 225, 0.2);
-    }
+      0 0 0 2px rgba(59, 130, 246, 0.4),
+      0 0 12px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(59, 130, 246, 0.5),
+      0 0 16px rgba(59, 130, 246, 0.4);
+  }
 }
 
 .vue-flow__node.processing {
-    opacity: 1 !important;
-    border: 2px solid #4299e1 !important;
-    box-shadow: 0 0 20px rgba(74, 144, 226, 0.7) !important;
-    animation: nodeProcessing 1.5s infinite;
+  opacity: 1 !important;
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4) !important;
 }
 
 .vue-flow__node.completed {
-    opacity: 1 !important;
-    border: 2px solid #48bb78 !important;
-    box-shadow: 0 0 20px rgba(39, 174, 96, 0.7) !important;
+  opacity: 1 !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4) !important;
 }
 
 .vue-flow__node.error {
-    opacity: 1 !important;
-    border: 2px solid #f56565 !important;
-    box-shadow: 0 0 20px rgba(245, 101, 101, 0.7) !important;
+  opacity: 1 !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4) !important;
 }
 
-.vue-flow__node.highlight {
-    opacity: 1 !important;
+/* Clean selection box */
+.vue-flow__selection {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  border-radius: 4px !important;
+}
+
+/* Minimal controls */
+.vue-flow__controls {
+  background: rgba(17, 17, 17, 0.95) !important;
+  border: 1px solid #333333 !important;
+  border-radius: 6px !important;
+}
+
+.vue-flow__controls button {
+  background: transparent !important;
+  border: none !important;
+  color: #9ca3af !important;
+  transition: color 0.2s ease !important;
+}
+
+.vue-flow__controls button:hover {
+  color: #ffffff !important;
+}
+
+/* Simple minimap */
+.vue-flow__minimap {
+  background: rgba(17, 17, 17, 0.95) !important;
+  border: 1px solid #333333 !important;
+  border-radius: 6px !important;
+}
+
+/* Clean scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Performance optimizations */
+.vue-flow__transformationpane {
+  will-change: transform;
+}
+
+.vue-flow__node {
+  will-change: transform, border-color, box-shadow;
 }
 
 .vue-flow__edge {
-    transition: all 0.3s ease;
+  will-change: stroke, stroke-width;
 }
 
-.vue-flow__edge.active {
-    stroke: #4299e1 !important;
-    stroke-width: 3px !important;
-    filter: drop-shadow(0 0 5px rgba(66, 153, 225, 0.5));
+/* Dragging performance */
+.vue-flow__node.dragging {
+  pointer-events: none;
+  z-index: 1000;
 }
 
-.vue-flow__edge.active path {
-    stroke-dasharray: 5;
-    animation: flowEdge 1s linear infinite;
+/* Prevent text selection during drag */
+.vue-flow__node * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
-@keyframes nodeProcessing {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-@keyframes nodeHighlight {
-    0% {
-        transform: scale(1.05);
-        box-shadow:
-            0 0 0 2px rgba(66, 153, 225, 0.3),
-            0 0 15px 2px rgba(66, 153, 225, 0.5),
-            0 0 30px 4px rgba(66, 153, 225, 0.3);
-    }
-    50% {
-        transform: scale(1.1);
-        box-shadow:
-            0 0 0 3px rgba(66, 153, 225, 0.4),
-            0 0 20px 3px rgba(66, 153, 225, 0.6),
-            0 0 40px 6px rgba(66, 153, 225, 0.4);
-    }
-    100% {
-        transform: scale(1.05);
-        box-shadow:
-            0 0 0 2px rgba(66, 153, 225, 0.3),
-            0 0 15px 2px rgba(66, 153, 225, 0.5),
-            0 0 30px 4px rgba(66, 153, 225, 0.3);
-    }
-}
-
-@keyframes flowEdge {
-    0% {
-        stroke-dashoffset: 10;
-    }
-    100% {
-        stroke-dashoffset: 0;
-    }
+/* But allow text selection in input fields */
+.vue-flow__node input,
+.vue-flow__node textarea,
+.vue-flow__node select {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }

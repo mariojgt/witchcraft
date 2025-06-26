@@ -36,44 +36,44 @@ Add the following configuration to your `vite.config.js`:
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
-import ReactivityTransform from '@vue-macros/reactivity-transform/vite';
-// Make sure you add the folllowing options to the existing configuration to properly build the Witchcraft custom nodes
+import tailwindcss from '@tailwindcss/vite'
+
 export default defineConfig({
-    plugins: [
-        ReactivityTransform(),
-        laravel({
-            input: [
-                'resources/vendor/Witchcraft/js/vue.js',
-                'resources/vendor/Witchcraft/sass/app.scss',
-            ],
-            refresh: true,
-        }),
-        vue({
-            template: {
-                transformAssetUrls: {
-                    base: null,
-                    includeAbsolute: false,
-                },
-            },
-            reactivityTransform: true
-        }),
-    ],
-    build: {
-        outDir: 'public/vendor/Witchcraft',
-        emptyOutDir: true,
-        rollupOptions: {
-            input: {
-                vue: 'resources/vendor/Witchcraft/js/vue.js',
-                css: 'resources/vendor/Witchcraft/sass/app.scss',
-            },
+  plugins: [
+    tailwindcss(),
+    laravel({
+      input: [
+        'resources/vendor/Witchcraft/js/vue.js',
+        'resources/vendor/Witchcraft/sass/app.scss',
+      ],
+      refresh: true,
+    }),
+    vue({
+      template: {
+        transformAssetUrls: {
+          base: null,
+          includeAbsolute: false,
         },
+      },
+      reactivityTransform: true
+    }),
+  ],
+  build: {
+    outDir: 'public/vendor/Witchcraft',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        vue: 'resources/vendor/Witchcraft/js/vue.js',
+        css: 'resources/vendor/Witchcraft/sass/app.scss',
+      },
     },
-    server: {
-        host: '0.0.0.0',
-        hmr: {
-            host: 'localhost'
-        }
-    },
+  },
+  server: {
+    host: '0.0.0.0',
+    hmr: {
+      host: 'localhost'
+    }
+  },
 });
 ```
 
@@ -190,7 +190,13 @@ class User extends Model
 use Mariojgt\Witchcraft\Services\WitchcraftTrigger;
 
 // Execute a workflow
-WitchcraftTrigger::execute(8, ['status' => 'active']);
+$flowDiagram = FlowDiagram::find(25);
+$executor = new FlowExecutor($flowDiagram);
+$initialData = [
+    'userStatus' => '{"success":true,"result":{"success":"mario","output":[],"message":"Source variable modelEvent not found"}}'
+];
+$result = $executor->run($initialData);
+dd($result);
 ```
 
 ## Configuration

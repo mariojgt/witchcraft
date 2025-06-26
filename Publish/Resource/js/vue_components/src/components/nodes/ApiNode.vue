@@ -1,120 +1,67 @@
 <template>
-    <div class="bg-gray-900/95 backdrop-blur border-[1px] border-cyan-500/30 rounded-xl p-4 min-w-[300px] relative text-gray-100">
+    <div class="bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-5 min-w-[320px] relative shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 hover:border-blue-500/30">
         <!-- Header -->
-        <div class="flex justify-between items-center mb-4 pb-2 border-b border-cyan-500/30">
-            <div class="flex items-center gap-2">
-                <DatabaseIcon class="w-5 h-5 text-cyan-400" />
-                <h3 class="font-bold text-cyan-400">API Request</h3>
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg flex items-center justify-center border border-blue-500/20">
+                    <DatabaseIcon class="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                    <h3 class="font-semibold text-white text-sm">API Request</h3>
+                    <p class="text-xs text-gray-400 leading-none mt-0.5">HTTP client for external APIs</p>
+                </div>
             </div>
-            <button @click="$emit('delete')" class="hover:bg-red-500/20 p-1 rounded transition-colors">
-                <XIcon class="w-4 h-4 text-red-400" />
+            <button @click="$emit('delete')" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-200 flex items-center justify-center group">
+                <XIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
             </button>
         </div>
 
         <!-- Content -->
         <div class="space-y-4">
-            <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-cyan-400">Request Type</label>
-                <select
-                    v-model="data.requestType"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-cyan-500 text-gray-100"
-                >
-                    <option value="external">External API</option>
-                    <option value="internal">Internal Route</option>
-                </select>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-2">
+                    <label class="block text-xs font-medium text-gray-300 tracking-wide">Method</label>
+                    <select v-model="data.method" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:bg-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 outline-none">
+                        <option v-for="method in ['GET', 'POST', 'PUT', 'DELETE']" :key="method" :value="method">{{ method }}</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <div class="relative">
+                            <input type="checkbox" v-model="data.saveResponse" class="sr-only" />
+                            <div class="w-4 h-4 border-2 border-white/20 rounded group-hover:border-blue-400/50 transition-colors flex items-center justify-center" :class="data.saveResponse ? 'bg-blue-500 border-blue-500' : ''">
+                                <CheckIcon v-if="data.saveResponse" class="w-3 h-3 text-white" />
+                            </div>
+                        </div>
+                        <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Save response</span>
+                    </label>
+                </div>
             </div>
 
             <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-cyan-400">Method</label>
-                <select
-                    v-model="data.method"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-cyan-500 text-gray-100"
-                >
-                    <option v-for="method in ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']"
-                            :key="method"
-                            :value="method"
-                            class="bg-gray-800"
-                    >
-                        {{ method }}
-                    </option>
-                </select>
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">URL</label>
+                <input v-model="data.url" placeholder="https://api.example.com/users" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 outline-none" />
             </div>
 
             <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-cyan-400">
-                    {{ data.requestType === 'external' ? 'Endpoint URL' : 'Route Name' }}
-                </label>
-                <input
-                    v-model="data.url"
-                    :placeholder="data.requestType === 'external' ? 'https://api.example.com/endpoint' : 'users.show'"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-cyan-500 text-gray-100"
-                />
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-cyan-400">Request Parameters</label>
-                <textarea
-                    v-model="data.params"
-                    placeholder="JSON parameters (query params or route parameters)"
-                    rows="2"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-cyan-500 text-gray-100 resize-none"
-                ></textarea>
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-cyan-400">Request Body</label>
-                <textarea
-                    v-model="data.body"
-                    placeholder="JSON payload"
-                    rows="3"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-cyan-500 text-gray-100 resize-none"
-                ></textarea>
-            </div>
-
-            <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-cyan-400">Headers</label>
-                <textarea
-                    v-model="data.headers"
-                    placeholder="JSON headers"
-                    rows="2"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-cyan-500 text-gray-100 resize-none"
-                ></textarea>
-            </div>
-
-            <div class="space-y-2">
-                <label class="flex items-center gap-2 text-cyan-400 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        v-model="data.saveResponse"
-                        class="rounded border-0 bg-gray-700 text-cyan-500 focus:ring-cyan-500"
-                    />
-                    <span class="text-sm">Save Response</span>
-                </label>
-
-                <label class="flex items-center gap-2 text-cyan-400 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        v-model="data.authenticatedRequest"
-                        class="rounded border-0 bg-gray-700 text-cyan-500 focus:ring-cyan-500"
-                    />
-                    <span class="text-sm">Authenticated Request</span>
-                </label>
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Request Body</label>
+                <textarea v-model="data.body" placeholder='{"key": "value"}' rows="2" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 resize-none focus:bg-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 outline-none"></textarea>
             </div>
         </div>
 
         <!-- Connection Points -->
-        <div class="absolute top-1/2 -left-3 w-3 h-6 bg-gray-800 rounded-l-lg border-l-2 border-y-2 border-cyan-500/50">
-            <Handle type="target" position="left" />
+        <div class="absolute top-1/2 -left-2 transform -translate-y-1/2">
+            <Handle type="target" position="left" class="!w-4 !h-4 !bg-gray-600 !border-2 !border-gray-800 hover:!bg-blue-500 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
         </div>
-        <div class="absolute top-1/2 -right-3 w-3 h-6 bg-gray-800 rounded-r-lg border-r-2 border-y-2 border-cyan-500/50">
-            <Handle type="source" position="right" class="!bg-cyan-500" />
+        <div class="absolute top-1/2 -right-2 transform -translate-y-1/2">
+            <Handle type="source" position="right" class="!w-4 !h-4 !bg-blue-500 !border-2 !border-gray-800 hover:!bg-blue-400 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
         </div>
     </div>
 </template>
 
 <script setup>
 import { Handle } from '@vue-flow/core'
-import { XIcon, DatabaseIcon } from 'lucide-vue-next'
+import { XIcon, DatabaseIcon, CheckIcon } from 'lucide-vue-next'
 import { defineOptions } from 'vue'
 
 defineOptions({
@@ -123,14 +70,10 @@ defineOptions({
         icon: DatabaseIcon,
         label: 'API Request',
         initialData: {
-            requestType: 'external',
             method: 'GET',
             url: '',
-            params: '{}',
             body: '{}',
-            headers: '{}',
-            saveResponse: true,
-            authenticatedRequest: false
+            saveResponse: true
         }
     }
 })

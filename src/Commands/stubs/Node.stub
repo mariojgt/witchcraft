@@ -1,42 +1,85 @@
 <template>
-    <div class="bg-gray-900/95 backdrop-blur border-[1px] border-blue-500/30 rounded-xl p-4 min-w-[300px] relative text-gray-100">
+    <div class="bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-5 min-w-[320px] relative shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 hover:border-blue-500/30">
         <!-- Header -->
-        <div class="flex justify-between items-center mb-4 pb-2 border-b border-blue-500/30">
-            <div class="flex items-center gap-2">
-                <BoxIcon class="w-5 h-5 text-blue-400" />
-                <h3 class="font-bold text-blue-400">{{componentName}}</h3>
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg flex items-center justify-center border border-blue-500/20">
+                    <BoxIcon class="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                    <h3 class="font-semibold text-white text-sm">{{componentName}}</h3>
+                    <p class="text-xs text-gray-400 leading-none mt-0.5">A custom {{nodeType}} node for workflow automation</p>
+                </div>
             </div>
-            <button @click="$emit('delete')" class="hover:bg-red-500/20 p-1 rounded transition-colors">
-                <XIcon class="w-4 h-4 text-red-400" />
+            <button
+                @click="$emit('delete')"
+                class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-200 flex items-center justify-center group"
+            >
+                <XIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
             </button>
         </div>
 
         <!-- Content -->
         <div class="space-y-4">
-            <!-- Add your node-specific inputs here -->
+            <!-- Example Input Field -->
             <div class="space-y-2">
-                <label class="text-xs uppercase tracking-wider text-blue-400">Example Input</label>
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Example Input</label>
                 <input
                     v-model="data.example"
-                    placeholder="Enter value"
-                    class="w-full bg-gray-800 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-100"
+                    placeholder="Enter your value here"
+                    class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 outline-none"
                 />
+            </div>
+
+            <!-- Output Key Field -->
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Output Variable</label>
+                <input
+                    v-model="data.outputKey"
+                    placeholder="result"
+                    class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 outline-none"
+                />
+            </div>
+
+            <!-- Example Checkbox Option -->
+            <div class="pt-2">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <div class="relative">
+                        <input
+                            type="checkbox"
+                            v-model="data.enableFeature"
+                            class="sr-only"
+                        />
+                        <div class="w-4 h-4 border-2 border-white/20 rounded group-hover:border-blue-400/50 transition-colors flex items-center justify-center" :class="data.enableFeature ? 'bg-blue-500 border-blue-500' : ''">
+                            <CheckIcon v-if="data.enableFeature" class="w-3 h-3 text-white" />
+                        </div>
+                    </div>
+                    <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Enable Feature</span>
+                </label>
             </div>
         </div>
 
         <!-- Connection Points -->
-        <div class="absolute top-1/2 -left-3 w-3 h-6 bg-gray-800 rounded-l-lg border-l-2 border-y-2 border-blue-500/50">
-            <Handle type="target" position="left" />
+        <div class="absolute top-1/2 -left-2 transform -translate-y-1/2">
+            <Handle
+                type="target"
+                position="left"
+                class="!w-4 !h-4 !bg-gray-600 !border-2 !border-gray-800 hover:!bg-blue-500 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg"
+            />
         </div>
-        <div class="absolute top-1/2 -right-3 w-3 h-6 bg-gray-800 rounded-r-lg border-r-2 border-y-2 border-blue-500/50">
-            <Handle type="source" position="right" class="!bg-blue-500" />
+        <div class="absolute top-1/2 -right-2 transform -translate-y-1/2">
+            <Handle
+                type="source"
+                position="right"
+                class="!w-4 !h-4 !bg-blue-500 !border-2 !border-gray-800 hover:!bg-blue-400 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg"
+            />
         </div>
     </div>
 </template>
 
 <script setup>
 import { Handle } from '@vue-flow/core'
-import { XIcon, BoxIcon } from 'lucide-vue-next'
+import { XIcon, BoxIcon, CheckIcon } from 'lucide-vue-next'
 import { defineOptions } from 'vue'
 
 defineOptions({
@@ -44,8 +87,11 @@ defineOptions({
         category: '{{category}}',
         icon: BoxIcon,
         label: '{{componentName}}',
+        description: 'A custom {{nodeType}} node for workflow automation',
         initialData: {
-            example: ''
+            example: '',
+            outputKey: '{{nodeType}}Result',
+            enableFeature: false
         }
     }
 })

@@ -47,9 +47,9 @@ class WitchcraftProvider extends ServiceProvider
 
     public function publish()
     {
-        // Publish the npm case we need to do soem developent
+        // Publish the npm case we need to do some development
         $this->publishes([
-            __DIR__ . '/../Publish/Npm/' => base_path()
+            __DIR__ . '/../Publish/Npm/' => base_path('witchcraft/npm')
         ]);
 
         // Publish the resource in case we need to compile

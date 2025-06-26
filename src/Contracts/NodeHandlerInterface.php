@@ -6,10 +6,6 @@ interface NodeHandlerInterface
 {
     /**
      * Handle the node processing
-     *
-     * @param array $nodeData The node data
-     * @param array $variables Current workflow variables
-     * @return array
      */
-    public function handle(array $nodeData, array $variables): array;
+    public function handle(array $node, array $variables): array;
 }

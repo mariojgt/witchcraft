@@ -1,4 +1,3 @@
-// services/SimulationService.js
 export default class SimulationService {
     constructor() {
         this.variables = {};
@@ -69,8 +68,8 @@ export default class SimulationService {
             // Add a small delay for visualization
             await this.delay(this.simulationSpeed);
 
-            // Your existing node processing code...
-            const response = await fetch('/api/process-node', {
+            // Updated route for node processing
+            const response = await fetch('/api/witchcraft/simulate-node', { // Updated route
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,13 +1,22 @@
-// services/DiagramService.js
 export default class DiagramService {
     static async fetchAll() {
         try {
-            const response = await fetch('/api/flow-diagrams');
+            const response = await fetch('/api/witchcraft/diagrams'); // Updated route
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-            return data;
+
+            // Parse JSON strings back to arrays for each diagram
+            return data.map(diagram => {
+                if (typeof diagram.nodes === 'string') {
+                    diagram.nodes = JSON.parse(diagram.nodes);
+                }
+                if (typeof diagram.edges === 'string') {
+                    diagram.edges = JSON.parse(diagram.edges);
+                }
+                return diagram;
+            });
         } catch (error) {
             console.error('Error fetching diagrams:', error);
             throw error;
@@ -16,11 +25,20 @@ export default class DiagramService {
 
     static async fetch(id) {
         try {
-            const response = await fetch(`/api/flow-diagrams/${id}`);
+            const response = await fetch(`/api/witchcraft/diagrams/${id}`); // Updated route
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
+
+            // Parse JSON strings back to arrays for frontend use
+            if (typeof data.nodes === 'string') {
+                data.nodes = JSON.parse(data.nodes);
+            }
+            if (typeof data.edges === 'string') {
+                data.edges = JSON.parse(data.edges);
+            }
+
             return data;
         } catch (error) {
             console.error('Error fetching diagram:', error);
@@ -30,7 +48,7 @@ export default class DiagramService {
 
     static async store(data) {
         try {
-            const response = await fetch('/api/flow-diagrams', {
+            const response = await fetch('/api/witchcraft/diagrams', { // Updated route
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -40,8 +58,8 @@ export default class DiagramService {
                 body: JSON.stringify({
                     name: data.name,
                     description: data.description,
-                    nodes: JSON.stringify(data.nodes),
-                    edges: JSON.stringify(data.edges)
+                    nodes: JSON.stringify(data.nodes),     // Keep JSON.stringify to save as string
+                    edges: JSON.stringify(data.edges)      // Keep JSON.stringify to save as string
                 })
             });
 
@@ -60,7 +78,7 @@ export default class DiagramService {
 
     static async update(id, data) {
         try {
-            const response = await fetch(`/api/flow-diagrams/${id}`, {
+            const response = await fetch(`/api/witchcraft/diagrams/${id}`, { // Updated route
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,8 +88,8 @@ export default class DiagramService {
                 body: JSON.stringify({
                     name: data.name,
                     description: data.description,
-                    nodes: JSON.stringify(data.nodes),
-                    edges: JSON.stringify(data.edges)
+                    nodes: JSON.stringify(data.nodes),     // Keep JSON.stringify to save as string
+                    edges: JSON.stringify(data.edges)      // Keep JSON.stringify to save as string
                 })
             });
 
@@ -88,7 +106,7 @@ export default class DiagramService {
 
     static async destroy(id) {
         try {
-            const response = await fetch(`/api/flow-diagrams/${id}`, {
+            const response = await fetch(`/api/witchcraft/diagrams/${id}`, { // Updated route
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',

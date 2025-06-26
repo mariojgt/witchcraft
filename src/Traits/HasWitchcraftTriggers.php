@@ -1,65 +1,47 @@
 <?php
+
 namespace Mariojgt\Witchcraft\Traits;
 
 use Mariojgt\Witchcraft\Models\FlowDiagram;
-use Mariojgt\Witchcraft\Services\WitchcraftTrigger;
+use Mariojgt\Witchcraft\Services\FlowExecutor;
 
 trait HasWitchcraftTriggers
 {
     protected static function bootHasWitchcraftTriggers()
     {
-        static::created(function ($model) {
-            static::handleModelEvent($model, 'created');
-        });
-
-        static::updated(function ($model) {
-            static::handleModelEvent($model, 'updated');
-        });
-
-        static::deleted(function ($model) {
-            static::handleModelEvent($model, 'deleted');
-        });
-
-        if (method_exists(static::class, 'restored')) {
-            static::restored(function ($model) {
-                static::handleModelEvent($model, 'restored');
-            });
-        }
+        static::created(fn($model) => static::triggerFlows($model, 'created'));
+        static::updated(fn($model) => static::triggerFlows($model, 'updated'));
+        static::deleted(fn($model) => static::triggerFlows($model, 'deleted'));
     }
 
-    protected static function handleModelEvent($model, $event)
+    protected static function triggerFlows($model, $event)
     {
-        $modelTableName = $model->getTable();
-        $flowDiagram = FlowDiagram::all();
-        $diagrams = [];
-        foreach ($flowDiagram as $key => $diagram) {
-            if ($diagram->nodes[0]['type'] === 'modelselect' && $diagram->nodes[0]['data']['modelName'] === $modelTableName && $diagram->nodes[0]['data']['eventType'] === $event) {
-                $diagrams[] = $diagram;
-                break;
-            }
-        }
+        $tableName = $model->getTable();
+
+        // Find diagrams that should be triggered by this model event
+        $diagrams = FlowDiagram::where('is_active', true)
+            ->get()
+            ->filter(function ($diagram) use ($tableName, $event) {
+                $startNodes = $diagram->getStartNodes();
+
+                return $startNodes->contains(function ($node) use ($tableName, $event) {
+                    return $node['type'] === 'modelselect'
+                        && ($node['data']['modelName'] ?? '') === $tableName
+                        && ($node['data']['eventType'] ?? '') === $event;
+                });
+            });
+
         foreach ($diagrams as $diagram) {
-            $modelNode = $diagram->nodes[0];
-
-            if (!$modelNode) {
-                continue;
+            try {
+                $executor = new FlowExecutor($diagram);
+                $executor->run([
+                    'model' => $model->toArray(),
+                    'event' => $event,
+                    'changes' => $model->getDirty(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::error("Flow execution failed for diagram {$diagram->id}: " . $e->getMessage());
             }
-
-            // Check if we need to watch specific fields
-            if (!empty($modelNode['data']['watchFields'])) {
-                $changedFields = array_keys($model->getDirty());
-                if (!array_intersect($changedFields, $modelNode['data']['watchFields'])) {
-                    continue;
-                }
-            }
-
-            // Execute the diagram with model data
-            WitchcraftTrigger::execute($diagram->id, [
-                'model' => $model->toArray(),
-                'event' => $event,
-                'changes' => $model->getDirty(),
-                'watchFields' => $modelNode['data']['watchFields'] ?? [],
-            ]);
         }
     }
 }
