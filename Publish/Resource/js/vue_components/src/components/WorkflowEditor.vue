@@ -1,4 +1,3 @@
-<!-- Integrated Professional WorkflowEditor.vue -->
 <template>
     <div class="h-screen bg-[#0a0a0a] relative flex">
         <!-- Professional Sidebar with Node Library -->

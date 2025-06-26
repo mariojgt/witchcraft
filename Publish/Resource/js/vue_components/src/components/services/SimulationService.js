@@ -99,29 +99,38 @@ export default class SimulationService {
             // Mark as completed after processing
             this.updateNodeStatus(node.id, 'completed');
 
-            // Process next nodes...
-            const outgoingEdges = edges.filter(edge => edge.source === node.id);
-            for (const edge of outgoingEdges) {
-
-                if (node.type === 'if') {
-                    const shouldFollow = edge.sourceHandle === (result.conditionResult ? 'true' : 'false');
-                    if (!shouldFollow) continue;
-                } else if (node.type === 'switchcase') {
-                    const selectedCase = result.selectedCase;
-                    if (edge.sourceHandle !== String(selectedCase)) continue;
-                }
-
-                const nextNode = allNodes.find(n => n.id === edge.target);
-                if (nextNode) {
-                    await this.processNode(nextNode, allNodes, edges);
-                }
-            }
+            // Process next nodes - fixed to match PHP logic
+            await this.processNextNodes(node, result, allNodes, edges);
 
             return result;
         } catch (error) {
             this.updateNodeStatus(node.id, 'error');
             this.addLog(`Error in node ${node.id}: ${error.message}`, 'error');
             throw error;
+        }
+    }
+
+    async processNextNodes(node, result, allNodes, edges) {
+        const outgoingEdges = edges.filter(edge => edge.source === node.id);
+
+        for (const edge of outgoingEdges) {
+            let shouldFollow = true;
+
+            // Handle conditional nodes
+            if ('conditionResult' in result) {
+                shouldFollow = edge.sourceHandle === (result.conditionResult ? 'true' : 'false');
+            }
+
+            if ('selectedCase' in result) {
+                shouldFollow = parseInt(edge.sourceHandle) === (result.selectedCase ?? null);
+            }
+
+            if (shouldFollow) {
+                const nextNode = allNodes.find(n => n.id === edge.target);
+                if (nextNode) {
+                    await this.processNode(nextNode, allNodes, edges);
+                }
+            }
         }
     }
 

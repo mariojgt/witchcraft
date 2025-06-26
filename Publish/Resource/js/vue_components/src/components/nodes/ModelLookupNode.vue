@@ -1,19 +1,24 @@
 <template>
-    <div :class="`bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-5 min-w-[320px] relative shadow-2xl transition-all duration-300 node-${data.colorTheme || 'green'}`">
+    <div :class="`bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-5 min-w-[320px] relative shadow-2xl transition-all duration-300 node-${data.colorTheme || 'purple'}`">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3 flex-1 min-w-0">
                 <div class="w-9 h-9 rounded-lg flex items-center justify-center border transition-all duration-300"
                      :class="getHeaderIconClass()">
-                    <CodeIcon :class="`w-5 h-5 transition-colors duration-300 ${getIconColorClass()}`" />
+                    <!-- DatabaseIcon for the node header -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="`w-5 h-5 transition-colors duration-300 ${getIconColorClass()}`">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                        <path d="M3 5V19A9 3 0 0 0 21 19V5"/>
+                        <path d="M3 12A9 3 0 0 0 21 12"/>
+                    </svg>
                 </div>
                 <div class="flex-1 min-w-0">
                     <!-- Editable Title -->
                     <div v-if="!isEditingTitle"
                          @click="startEditingTitle"
-                         class="font-semibold text-white text-sm cursor-pointer hover:text-green-400 transition-colors truncate"
-                         :title="data.customTitle || 'JSON Extract'">
-                        {{ data.customTitle || 'JSON Extract' }}
+                         class="font-semibold text-white text-sm cursor-pointer hover:text-purple-400 transition-colors truncate"
+                         :title="data.customTitle || 'Model Lookup'">
+                        {{ data.customTitle || 'Model Lookup' }}
                     </div>
                     <input v-else
                            v-model="editingTitle"
@@ -21,12 +26,12 @@
                            @keydown.enter="finishEditingTitle"
                            @keydown.escape="cancelEditingTitle"
                            ref="titleInput"
-                           class="font-semibold text-white text-sm bg-transparent border-b border-green-500 outline-none w-full"
+                           class="font-semibold text-white text-sm bg-transparent border-b border-purple-500 outline-none w-full"
                            placeholder="Enter custom title" />
 
                     <div class="flex items-center gap-2 mt-0.5">
                         <p class="text-xs text-gray-400 leading-none truncate">
-                            {{ data.customDescription || 'Parse and extract JSON data' }}
+                            {{ data.customDescription || 'Fetch a record by ID from a database model' }}
                         </p>
                         <!-- Comment indicator with hover tooltip -->
                         <div v-if="data.comment && data.comment.trim()"
@@ -67,7 +72,7 @@
 
                 <!-- Settings button -->
                 <button @click="toggleSettings"
-                        class="w-8 h-8 rounded-lg hover:bg-green-500/10 text-gray-400 hover:text-green-400 transition-all duration-200 flex items-center justify-center group"
+                        class="w-8 h-8 rounded-lg hover:bg-purple-500/10 text-gray-400 hover:text-purple-400 transition-all duration-200 flex items-center justify-center group"
                         title="Node Settings">
                     <SettingsIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
                 </button>
@@ -86,14 +91,14 @@
                 <label class="block text-xs font-medium text-gray-300 tracking-wide">Custom Title</label>
                 <input v-model="data.customTitle"
                        placeholder="Enter custom node title"
-                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
             </div>
 
             <div class="space-y-2">
                 <label class="block text-xs font-medium text-gray-300 tracking-wide">Custom Description</label>
                 <input v-model="data.customDescription"
                        placeholder="Enter custom description"
-                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
             </div>
 
             <!-- Color Theme -->
@@ -140,48 +145,75 @@
         <!-- Content -->
         <div class="space-y-4">
             <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">Source Variable</label>
-                <input v-model="data.sourceVariable" placeholder="modelEvent" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
-                <div class="text-xs text-green-400/70">Use {{variableName}} to reference other variables</div>
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Model</label>
+                <select v-model="data.modelName" @change="data.recordId = ''; data.sourceVariable = '';" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none">
+                    <option value="">Select a model</option>
+                    <option v-for="model in availableModels" :key="model" :value="model">{{ model }}</option>
+                </select>
             </div>
 
             <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">JSON Path</label>
-                <input v-model="data.jsonPath" placeholder="user.name or data[0].value" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Source Variable (Optional)</label>
+                <input v-model="data.sourceVariable" type="text" placeholder="e.g., extractedId, userId" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" @input="data.recordId = '';" />
+                <div class="text-xs text-purple-400/70">Use {{variableName}} to reference other variables</div>
+            </div>
+
+            <div class="space-y-2" v-if="!data.sourceVariable">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Record ID (Direct Input)</label>
+                <input v-model="data.recordId" type="text" placeholder="e.g., 123, abc-xyz" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
             </div>
 
             <div class="space-y-2">
                 <label class="block text-xs font-medium text-gray-300 tracking-wide">Output Key</label>
-                <input v-model="data.outputKey" placeholder="extractedValue" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+                <input v-model="data.outputKey" placeholder="Variable output key (e.g., fetchedUser)" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
             </div>
 
-            <!-- Path helper -->
-            <div class="bg-white/5 border border-white/10 rounded-lg p-3">
-                <div class="text-xs text-gray-400">
-                    <span class="font-medium text-gray-300">Examples:</span>
-                    <span class="text-green-400">user.name, data[0], items.length</span>
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Field to Extract (Optional)</label>
+                <input v-model="data.fieldToExtract" placeholder="e.g., name, email, id (leave empty for full record)" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
+                <div class="text-xs text-purple-400/70">Specify a field name to return only that field value, or leave empty to return the entire record</div>
+            </div>
+
+            <!-- Output indicators for true/false paths -->
+            <div class="flex items-center justify-between pt-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-green-500 rounded-full shadow-lg"></div>
+                    <span class="text-xs text-gray-400">Record Found</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-red-500 rounded-full shadow-lg"></div>
+                    <span class="text-xs text-gray-400">Not Found</span>
                 </div>
             </div>
         </div>
 
         <!-- Connection Points -->
+        <!-- Input pin (Target) -->
         <div class="absolute top-1/2 -left-2 transform -translate-y-1/2">
-            <Handle type="target" position="left" class="!w-4 !h-4 !bg-gray-600 !border-2 !border-gray-800 hover:!bg-green-500 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
+            <Handle type="target" position="left" class="!w-4 !h-4 !bg-gray-600 !border-2 !border-gray-800 hover:!bg-purple-500 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
         </div>
+
+        <!-- Output pins (Source) -->
+        <!-- True path: Record Found -->
         <div class="absolute top-1/2 -right-2 transform -translate-y-1/2">
-            <Handle type="source" position="right" class="!w-4 !h-4 !bg-green-500 !border-2 !border-gray-800 hover:!bg-green-400 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
+            <Handle type="source" position="right" id="true" class="!w-4 !h-4 !bg-green-500 !border-2 !border-gray-800 hover:!bg-green-400 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
+        </div>
+        <!-- False path: Not Found -->
+        <div class="absolute bottom-0 left-1/2 transform translate-y-2 -translate-x-1/2">
+            <Handle type="source" position="bottom" id="false" class="!w-4 !h-4 !bg-red-500 !border-2 !border-gray-800 hover:!bg-red-400 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
-import { Handle } from '@vue-flow/core'
-import { XIcon, CodeIcon, MessageSquareIcon, SettingsIcon } from 'lucide-vue-next'
-import { defineOptions } from 'vue'
+import { ref, onMounted, nextTick } from 'vue';
+import { Handle } from '@vue-flow/core';
+import { XIcon, MessageSquareIcon, SettingsIcon } from "lucide-vue-next"
 
-const props = defineProps(['data'])
-defineEmits(['delete'])
+const props = defineProps(['data']);
+const emit = defineEmits(['delete']);
+
+const availableModels = ref([]);
 
 // UI state
 const showComment = ref(false)
@@ -205,7 +237,7 @@ const colorThemes = [
 
 // Color theme functions
 function getHeaderIconClass() {
-    const theme = props.data.colorTheme || 'green'
+    const theme = props.data.colorTheme || 'purple'
     const classes = {
         purple: 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/20',
         blue: 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/20',
@@ -216,11 +248,11 @@ function getHeaderIconClass() {
         gray: 'bg-gradient-to-br from-gray-500/20 to-gray-600/20 border-gray-500/20',
         orange: 'bg-gradient-to-br from-orange-500/20 to-orange-600/20 border-orange-500/20'
     }
-    return classes[theme] || classes.green
+    return classes[theme] || classes.purple
 }
 
 function getIconColorClass() {
-    const theme = props.data.colorTheme || 'green'
+    const theme = props.data.colorTheme || 'purple'
     const classes = {
         purple: 'text-purple-400',
         blue: 'text-blue-400',
@@ -231,7 +263,7 @@ function getIconColorClass() {
         gray: 'text-gray-400',
         orange: 'text-orange-400'
     }
-    return classes[theme] || classes.green
+    return classes[theme] || classes.purple
 }
 
 // Comment functions
@@ -253,7 +285,7 @@ function toggleSettings() {
 // Title editing functions
 function startEditingTitle() {
     isEditingTitle.value = true
-    editingTitle.value = props.data.customTitle || 'JSON Extract'
+    editingTitle.value = props.data.customTitle || 'Model Lookup'
     nextTick(() => {
         titleInput.value?.focus()
         titleInput.value?.select()
@@ -270,23 +302,43 @@ function cancelEditingTitle() {
     editingTitle.value = ""
 }
 
-defineOptions({
-    nodeMetadata: {
-        category: 'Data',
-        icon: CodeIcon,
-        label: 'JSON Extract',
-        initialData: {
-            sourceVariable: 'modelEvent',
-            jsonPath: 'name',
-            outputKey: 'extractedValue',
-            // Enhanced properties
-            customTitle: "",
-            customDescription: "",
-            comment: "",
-            colorTheme: "green"
-        }
+onMounted(() => {
+  fetchModels();
+});
+
+// Fetches available database tables (models)
+const fetchModels = async () => {
+  try {
+    const response = await fetch('/api/witchcraft/tables');
+    if (!response.ok) {
+        // Handle error more gracefully in production, maybe a notification
+        console.error(`HTTP error! status: ${response.status}`);
+        // Optionally: display a message in the UI if critical
     }
-})
+    availableModels.value = await response.json();
+  } catch (error) {
+    console.error('Failed to fetch models:', error);
+  }
+};
+
+defineOptions({
+  nodeMetadata: {
+    category: 'Data',
+    icon: null, // Icon is now an inline SVG in the template
+    label: 'Model Lookup',
+    initialData: {
+      modelName: '',
+      recordId: '', // Direct input for record ID
+      sourceVariable: '', // Variable name for record ID
+      outputKey: 'fetchedRecord',
+      // Enhanced properties
+      customTitle: "",
+      customDescription: "",
+      comment: "",
+      colorTheme: "purple"
+    },
+  },
+});
 </script>
 
 <style scoped>

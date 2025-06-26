@@ -17,12 +17,15 @@ class NodeHandlerFactory
         'setvariable' => SetVariableHandler::class,
         'getvariable' => GetVariableHandler::class,
         'triggerflow' => TriggerFlowHandler::class,
+        'modellookup' => ModelLookupHandler::class,
+        'datecondition' => DateConditionHandler::class,
     ];
 
     public static function create($nodeType)
     {
         // First try custom handler
         $customHandler = self::getCustomHandler($nodeType);
+
         if ($customHandler && class_exists($customHandler)) {
             return new $customHandler();
         }
@@ -40,7 +43,8 @@ class NodeHandlerFactory
     protected static function getCustomHandler($nodeType)
     {
         $handlerName = str_replace(['-', '_'], ' ', $nodeType);
-        $handlerName = ucwords($handlerName);
+        // Convert to CamelCase using laravel's Str helper
+        $handlerName = \Illuminate\Support\Str::studly($handlerName);
         $handlerName = str_replace(' ', '', $handlerName);
 
         return "App\\Witchcraft\\Handlers\\{$handlerName}Handler";

@@ -1,16 +1,140 @@
 <template>
-    <div class="bg-gray-900/95 border border-gray-700 rounded-lg p-4 min-w-[280px] relative shadow-lg hover:shadow-xl transition-shadow backdrop-blur">
+    <div :class="`bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-5 min-w-[320px] relative shadow-2xl transition-all duration-300 node-${data.colorTheme || 'indigo'}`">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-                <div class="w-7 h-7 bg-indigo-500/20 rounded-md flex items-center justify-center">
-                    <TerminalIcon class="w-4 h-4 text-indigo-400" />
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center border transition-all duration-300"
+                     :class="getHeaderIconClass()">
+                    <TerminalIcon class="w-5 h-5 transition-colors duration-300" :class="getIconColorClass()" />
                 </div>
-                <h3 class="font-medium text-white text-sm">Artisan Command</h3>
+                <div class="flex-1 min-w-0">
+                    <!-- Editable Title -->
+                    <div v-if="!isEditingTitle"
+                         @click="startEditingTitle"
+                         class="font-semibold text-white text-sm cursor-pointer hover:text-indigo-400 transition-colors truncate"
+                         :title="data.customTitle || 'Artisan Command'">
+                        {{ data.customTitle || 'Artisan Command' }}
+                    </div>
+                    <input v-else
+                           v-model="editingTitle"
+                           @blur="finishEditingTitle"
+                           @keydown.enter="finishEditingTitle"
+                           @keydown.escape="cancelEditingTitle"
+                           ref="titleInput"
+                           class="font-semibold text-white text-sm bg-transparent border-b border-indigo-500 outline-none w-full"
+                           placeholder="Enter custom title" />
+
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <p class="text-xs text-gray-400 leading-none truncate">
+                            {{ data.customDescription || 'Execute Laravel Artisan commands' }}
+                        </p>
+                        <!-- Comment indicator with hover tooltip -->
+                        <div v-if="data.comment && data.comment.trim()"
+                             class="relative comment-indicator"
+                             @mouseenter="showTooltip = true"
+                             @mouseleave="showTooltip = false">
+                            <div class="w-3 h-3 bg-yellow-500/30 border border-yellow-500/50 rounded-full flex items-center justify-center">
+                                <MessageSquareIcon class="w-2 h-2 text-yellow-400" />
+                            </div>
+
+                            <!-- Hover Tooltip -->
+                            <div v-if="showTooltip"
+                                 class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
+                                <div class="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl max-w-xs">
+                                    <div class="text-xs font-medium text-yellow-400 mb-1">Comment:</div>
+                                    <div class="text-xs text-gray-200 whitespace-pre-wrap">{{ data.comment }}</div>
+                                    <!-- Tooltip arrow -->
+                                    <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 border-r border-b border-gray-700 rotate-45"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button @click="$emit('delete')" class="p-1 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors">
-                <XIcon class="w-4 h-4" />
-            </button>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-1 ml-2">
+                <!-- Comment button -->
+                <button @click="toggleComment"
+                        :class="`w-8 h-8 rounded-lg transition-all duration-200 flex items-center justify-center group ${
+                            data.comment && data.comment.trim()
+                                ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                                : 'hover:bg-yellow-500/10 text-gray-400 hover:text-yellow-400'
+                        }`"
+                        title="Add/Edit Comment">
+                    <MessageSquareIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </button>
+
+                <!-- Settings button -->
+                <button @click="toggleSettings"
+                        class="w-8 h-8 rounded-lg hover:bg-indigo-500/10 text-gray-400 hover:text-indigo-400 transition-all duration-200 flex items-center justify-center group"
+                        title="Node Settings">
+                    <SettingsIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </button>
+
+                <!-- Delete button -->
+                <button @click="$emit('delete')"
+                        class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-200 flex items-center justify-center group">
+                    <XIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div v-if="showSettings" class="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg space-y-3">
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Custom Title</label>
+                <input v-model="data.customTitle"
+                       placeholder="Enter custom node title"
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 outline-none" />
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Custom Description</label>
+                <input v-model="data.customDescription"
+                       placeholder="Enter custom description"
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 outline-none" />
+            </div>
+
+            <!-- Color Theme -->
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Color Theme</label>
+                <div class="flex gap-2">
+                    <button v-for="color in colorThemes" :key="color.name"
+                            @click="data.colorTheme = color.name"
+                            :class="`w-6 h-6 rounded-lg border-2 transition-all duration-200 ${
+                                data.colorTheme === color.name
+                                    ? 'border-white scale-110'
+                                    : 'border-gray-600 hover:border-gray-500'
+                            }`"
+                            :style="{ background: color.gradient }"
+                            :title="color.label">
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comment Panel -->
+        <div v-if="showComment" class="mb-4 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+                <MessageSquareIcon class="w-4 h-4 text-yellow-400" />
+                <span class="text-sm font-medium text-yellow-400">Comment</span>
+            </div>
+            <textarea v-model="data.comment"
+                      placeholder="Add a comment to help document this node's purpose..."
+                      rows="3"
+                      class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:bg-white/10 focus:border-yellow-500/50 focus:ring-2 focus:ring-yellow-500/20 transition-all duration-200 outline-none">
+            </textarea>
+            <div class="flex justify-end gap-2 mt-2">
+                <button @click="showComment = false"
+                        class="px-3 py-1 text-xs text-gray-400 hover:text-white transition-colors">
+                    Cancel
+                </button>
+                <button @click="saveComment"
+                        class="px-3 py-1 text-xs bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded transition-colors">
+                    Save
+                </button>
+            </div>
         </div>
 
         <!-- Content -->
@@ -20,7 +144,7 @@
                 <input
                     v-model="data.command"
                     placeholder="migrate, queue:work, etc."
-                    class="w-full text-sm border-0 bg-gray-800 rounded-md px-2 py-1.5 text-white placeholder-gray-500 focus:bg-gray-700 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 outline-none"
                 />
             </div>
 
@@ -30,7 +154,7 @@
                     v-model="data.arguments"
                     placeholder="--force&#10;--seed"
                     rows="2"
-                    class="w-full text-sm border-0 bg-gray-800 rounded-md px-2 py-1.5 text-white placeholder-gray-500 resize-none focus:bg-gray-700 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 resize-none focus:bg-white/10 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 outline-none"
                 ></textarea>
             </div>
 
@@ -40,42 +164,100 @@
                     <input
                         v-model="data.outputKey"
                         placeholder="artisanOutput"
-                        class="w-full text-sm border-0 bg-gray-800 rounded-md px-2 py-1.5 text-white placeholder-gray-500 focus:bg-gray-700 focus:ring-1 focus:ring-indigo-500 transition-colors"
+                        class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:bg-white/10 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 outline-none"
                     />
                 </div>
 
                 <div class="flex items-end">
                     <label class="flex items-center gap-1.5 cursor-pointer group">
-                        <input
-                            type="checkbox"
-                            v-model="data.saveOutput"
-                            class="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-indigo-500 focus:ring-1"
-                        />
+                        <div class="relative">
+                            <input type="checkbox" v-model="data.saveOutput" class="sr-only" />
+                            <div class="w-4 h-4 border-2 border-white/20 rounded group-hover:border-indigo-400/50 transition-colors flex items-center justify-center" :class="data.saveOutput ? 'bg-indigo-500 border-indigo-500' : ''">
+                                <CheckIcon v-if="data.saveOutput" class="w-3 h-3 text-white" />
+                            </div>
+                        </div>
                         <span class="text-xs text-gray-400 group-hover:text-gray-300">Save output</span>
                     </label>
                 </div>
             </div>
 
             <!-- Command Preview -->
-            <div class="text-xs text-gray-400 bg-gray-800 rounded-md p-2 font-mono">
+            <div class="text-xs text-gray-400 bg-white/5 border border-white/10 rounded-lg p-3 font-mono">
                 {{ commandPreview }}
             </div>
         </div>
 
         <!-- Connection Points -->
-        <Handle type="target" position="left" class="!w-3 !h-3 !bg-gray-600 !border-2 !border-gray-900 hover:!bg-indigo-500 transition-colors" />
-        <Handle type="source" position="right" class="!w-3 !h-3 !bg-indigo-500 !border-2 !border-gray-900 hover:!bg-indigo-400 transition-colors" />
+        <div class="absolute top-1/2 -left-2 transform -translate-y-1/2">
+            <Handle type="target" position="left" class="!w-4 !h-4 !bg-gray-600 !border-2 !border-gray-800 hover:!bg-indigo-500 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
+        </div>
+        <div class="absolute top-1/2 -right-2 transform -translate-y-1/2">
+            <Handle type="source" position="right" class="!w-4 !h-4 !bg-indigo-500 !border-2 !border-gray-800 hover:!bg-indigo-400 hover:!scale-110 transition-all duration-200 !rounded-full shadow-lg" />
+        </div>
     </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { Handle } from '@vue-flow/core'
-import { XIcon, TerminalIcon } from 'lucide-vue-next'
+import { XIcon, TerminalIcon, CheckIcon, MessageSquareIcon, SettingsIcon } from 'lucide-vue-next'
 import { defineOptions } from 'vue'
 
 const props = defineProps(['data'])
+defineEmits(['delete'])
 
+// UI state
+const showComment = ref(false)
+const showSettings = ref(false)
+const isEditingTitle = ref(false)
+const editingTitle = ref("")
+const titleInput = ref(null)
+const showTooltip = ref(false)
+
+// Color themes
+const colorThemes = [
+    { name: 'indigo', label: 'Indigo', gradient: 'linear-gradient(145deg, #6366f1, #4f46e5)' },
+    { name: 'blue', label: 'Blue', gradient: 'linear-gradient(145deg, #3b82f6, #1d4ed8)' },
+    { name: 'purple', label: 'Purple', gradient: 'linear-gradient(145deg, #8b5cf6, #7c3aed)' },
+    { name: 'green', label: 'Green', gradient: 'linear-gradient(145deg, #10b981, #059669)' },
+    { name: 'red', label: 'Red', gradient: 'linear-gradient(145deg, #ef4444, #dc2626)' },
+    { name: 'yellow', label: 'Yellow', gradient: 'linear-gradient(145deg, #f59e0b, #d97706)' },
+    { name: 'pink', label: 'Pink', gradient: 'linear-gradient(145deg, #ec4899, #db2777)' },
+    { name: 'gray', label: 'Gray', gradient: 'linear-gradient(145deg, #6b7280, #4b5563)' }
+]
+
+// Color theme functions
+function getHeaderIconClass() {
+    const theme = props.data.colorTheme || 'indigo'
+    const classes = {
+        indigo: 'bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 border-indigo-500/20',
+        blue: 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/20',
+        purple: 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/20',
+        green: 'bg-gradient-to-br from-green-500/20 to-green-600/20 border-green-500/20',
+        red: 'bg-gradient-to-br from-red-500/20 to-red-600/20 border-red-500/20',
+        yellow: 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-yellow-500/20',
+        pink: 'bg-gradient-to-br from-pink-500/20 to-pink-600/20 border-pink-500/20',
+        gray: 'bg-gradient-to-br from-gray-500/20 to-gray-600/20 border-gray-500/20'
+    }
+    return classes[theme] || classes.indigo
+}
+
+function getIconColorClass() {
+    const theme = props.data.colorTheme || 'indigo'
+    const classes = {
+        indigo: 'text-indigo-400',
+        blue: 'text-blue-400',
+        purple: 'text-purple-400',
+        green: 'text-green-400',
+        red: 'text-red-400',
+        yellow: 'text-yellow-400',
+        pink: 'text-pink-400',
+        gray: 'text-gray-400'
+    }
+    return classes[theme] || classes.indigo
+}
+
+// Command preview
 const commandPreview = computed(() => {
     let cmd = "php artisan " + (props.data.command || '');
 
@@ -90,6 +272,42 @@ const commandPreview = computed(() => {
     return cmd;
 });
 
+// Comment functions
+function toggleComment() {
+    showComment.value = !showComment.value
+    showSettings.value = false
+}
+
+function saveComment() {
+    showComment.value = false
+}
+
+// Settings functions
+function toggleSettings() {
+    showSettings.value = !showSettings.value
+    showComment.value = false
+}
+
+// Title editing functions
+function startEditingTitle() {
+    isEditingTitle.value = true
+    editingTitle.value = props.data.customTitle || 'Artisan Command'
+    nextTick(() => {
+        titleInput.value?.focus()
+        titleInput.value?.select()
+    })
+}
+
+function finishEditingTitle() {
+    props.data.customTitle = editingTitle.value.trim()
+    isEditingTitle.value = false
+}
+
+function cancelEditingTitle() {
+    isEditingTitle.value = false
+    editingTitle.value = ""
+}
+
 defineOptions({
     nodeMetadata: {
         category: 'System',
@@ -99,10 +317,120 @@ defineOptions({
             command: '',
             arguments: '',
             saveOutput: true,
-            outputKey: 'artisanOutput'
+            outputKey: 'artisanOutput',
+            // Enhanced properties
+            customTitle: "",
+            customDescription: "",
+            comment: "",
+            colorTheme: "indigo"
         },
     },
 });
-
-defineEmits(['delete'])
 </script>
+
+<style scoped>
+/* Dynamic color theming */
+.node-indigo {
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.1);
+}
+.node-indigo:hover {
+    box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.node-blue {
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+.node-blue:hover {
+    box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.node-purple {
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.1);
+}
+.node-purple:hover {
+    box-shadow: 0 25px 50px -12px rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.node-green {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1);
+}
+.node-green:hover {
+    box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.node-red {
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+}
+.node-red:hover {
+    box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.node-yellow {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.1);
+}
+.node-yellow:hover {
+    box-shadow: 0 25px 50px -12px rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.node-pink {
+    box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.1);
+}
+.node-pink:hover {
+    box-shadow: 0 25px 50px -12px rgba(236, 72, 153, 0.1);
+    border-color: rgba(236, 72, 153, 0.3);
+}
+
+.node-gray {
+    box-shadow: 0 0 0 1px rgba(107, 114, 128, 0.1);
+}
+.node-gray:hover {
+    box-shadow: 0 25px 50px -12px rgba(107, 114, 128, 0.1);
+    border-color: rgba(107, 114, 128, 0.3);
+}
+
+/* Comment indicator hover effects */
+.comment-indicator {
+    transition: all 0.2s ease-in-out;
+}
+
+.comment-indicator:hover {
+    transform: scale(1.1);
+}
+
+/* Tooltip animation */
+.comment-indicator div[class*="absolute"] {
+    animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Better tooltip positioning on smaller screens */
+@media (max-width: 640px) {
+    .comment-indicator div[class*="absolute"] {
+        left: auto;
+        right: 0;
+        transform: translateX(0) translateY(0);
+    }
+
+    .comment-indicator div[class*="absolute"] .absolute {
+        left: auto;
+        right: 12px;
+        transform: translateX(0);
+    }
+}
+</style>

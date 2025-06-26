@@ -36,7 +36,7 @@ class MakeNodeCommand extends Command
     protected function createNodeHandler($name)
     {
         $stub = file_get_contents(__DIR__ . '/stubs/NodeHandler.stub');
-        $className = Str::studly($name) . 'NodeHandler';
+        $className = Str::studly($name) . 'Handler';
         $componentName = Str::studly($name) . 'Node';
 
         $content = str_replace(

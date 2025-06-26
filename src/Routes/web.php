@@ -30,4 +30,5 @@ Route::middleware(config('witchcraft.editor_middlewares', ['web']))
         // Model utilities
         Route::get('tables', [ModelUtilityController::class, 'getTables']);
         Route::get('tables/{table}/columns', [ModelUtilityController::class, 'getTableColumns']);
+        Route::get('tables/{tableName}/records/{id}', [ModelUtilityController::class, 'getRecord']);
     });

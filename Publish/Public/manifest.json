@@ -1,14 +1,16 @@
 {
   "resources/vendor/Witchcraft/js/vue.js": {
-    "file": "assets/vue-CokR97iu.js",
+    "file": "assets/vue-B8gUvkUI.js",
     "name": "vue",
     "src": "resources/vendor/Witchcraft/js/vue.js",
     "isEntry": true,
     "dynamicImports": [
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ApiNode.vue",
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ArtisanNode.vue",
+      "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/DateConditionNode.vue",
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/GetVariableNode.vue",
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/IfNode.vue",
+      "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ModelLookupNode.vue",
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ModelSelectNode.vue",
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/NotificationNode.vue",
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ParseJsonNode.vue",
@@ -19,56 +21,95 @@
       "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerWebhookNode.vue"
     ],
     "css": [
-      "assets/vue-BDzVOasS.css"
+      "assets/vue-DT9DE5Ra.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ApiNode.vue": {
-    "file": "assets/ApiNode-BBC-mHrz.js",
+    "file": "assets/ApiNode-DoOM8291.js",
     "name": "ApiNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ApiNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/ApiNode-Bu68O2p7.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ArtisanNode.vue": {
-    "file": "assets/ArtisanNode-CU4AWmGh.js",
+    "file": "assets/ArtisanNode-txk-22U1.js",
     "name": "ArtisanNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ArtisanNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/ArtisanNode-CP5ruCJs.css"
+    ]
+  },
+  "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/DateConditionNode.vue": {
+    "file": "assets/DateConditionNode-aFzAvIhq.js",
+    "name": "DateConditionNode",
+    "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/DateConditionNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/DateConditionNode-C_woCx1R.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/GetVariableNode.vue": {
-    "file": "assets/GetVariableNode-Cwx7UGap.js",
+    "file": "assets/GetVariableNode-DyZqQr_2.js",
     "name": "GetVariableNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/GetVariableNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/GetVariableNode-BsBqfvGI.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/IfNode.vue": {
-    "file": "assets/IfNode-BtnjxWMn.js",
+    "file": "assets/IfNode-ihG4ooWl.js",
     "name": "IfNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/IfNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/IfNode-Dlva3fsd.css"
+    ]
+  },
+  "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ModelLookupNode.vue": {
+    "file": "assets/ModelLookupNode-ByN9Uz7q.js",
+    "name": "ModelLookupNode",
+    "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ModelLookupNode.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/ModelLookupNode-DIbRzRGD.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ModelSelectNode.vue": {
-    "file": "assets/ModelSelectNode-Ccwnng2S.js",
+    "file": "assets/ModelSelectNode-Uq_tskY6.js",
     "name": "ModelSelectNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ModelSelectNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/ModelSelectNode-BZ11ZKP3.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/NotificationNode.vue": {
-    "file": "assets/NotificationNode-CzZWeA3O.js",
+    "file": "assets/NotificationNode-DOId1c3C.js",
     "name": "NotificationNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/NotificationNode.vue",
     "isDynamicEntry": true,
@@ -77,57 +118,75 @@
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ParseJsonNode.vue": {
-    "file": "assets/ParseJsonNode-DAjqoUsT.js",
+    "file": "assets/ParseJsonNode-AKl8Dr1q.js",
     "name": "ParseJsonNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/ParseJsonNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/ParseJsonNode-ByyICiws.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/SetVariableNode.vue": {
-    "file": "assets/SetVariableNode-Bg-boU1T.js",
+    "file": "assets/SetVariableNode-DgugwtYw.js",
     "name": "SetVariableNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/SetVariableNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/SetVariableNode-BNP4Ih9T.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/SwitchCaseNode.vue": {
-    "file": "assets/SwitchCaseNode-C4wkJd3y.js",
+    "file": "assets/SwitchCaseNode-DME_JETn.js",
     "name": "SwitchCaseNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/SwitchCaseNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/SwitchCaseNode-BkOb0aPH.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerFlowNode.vue": {
-    "file": "assets/TriggerFlowNode-CPLFt8k7.js",
+    "file": "assets/TriggerFlowNode-Brs5wpRl.js",
     "name": "TriggerFlowNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerFlowNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/TriggerFlowNode-BSYrAc_F.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerNode.vue": {
-    "file": "assets/TriggerNode-BY3YkdTE.js",
+    "file": "assets/TriggerNode-CVrKfkzi.js",
     "name": "TriggerNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/TriggerNode-uSiabso0.css"
     ]
   },
   "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerWebhookNode.vue": {
-    "file": "assets/TriggerWebhookNode-BWtbeE63.js",
+    "file": "assets/TriggerWebhookNode-B5N8EYoz.js",
     "name": "TriggerWebhookNode",
     "src": "resources/vendor/Witchcraft/js/vue_components/src/components/nodes/TriggerWebhookNode.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/vendor/Witchcraft/js/vue.js"
+    ],
+    "css": [
+      "assets/TriggerWebhookNode-DS-rSkiH.css"
     ]
   },
   "resources/vendor/Witchcraft/sass/app.scss": {
