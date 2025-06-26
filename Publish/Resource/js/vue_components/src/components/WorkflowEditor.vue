@@ -1136,12 +1136,14 @@ function handleClickOutside(event) {
 // Load node components (keeping original functionality)
 onMounted(async () => {
     try {
-        const defaultNodeFiles = import.meta.glob('./nodes/*.vue');
+        // ONLY CHANGE THIS LINE - add { eager: true }
+        const defaultNodeFiles = import.meta.glob('./nodes/*.vue', { eager: true });
 
         for (const path in defaultNodeFiles) {
             const fileName = path.split('/').pop().replace('.vue', '');
             const nodeType = fileName.toLowerCase().replace('node', '');
-            const module = await defaultNodeFiles[path]();
+            // CHANGE: Remove await since it's already loaded
+            const module = defaultNodeFiles[path];
 
             // Register component
             nodeComponents[nodeType] = markRaw(module.default);
@@ -1169,10 +1171,8 @@ onMounted(async () => {
         });
 
         await loadSavedDiagrams();
-
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('click', handleClickOutside);
-
         saveToHistory();
 
     } catch (error) {
