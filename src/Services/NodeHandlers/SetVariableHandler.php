@@ -1,4 +1,5 @@
 <?php
+
 namespace Mariojgt\Witchcraft\Services\NodeHandlers;
 
 use Illuminate\Support\Facades\Cache;
@@ -32,16 +33,24 @@ class SetVariableHandler extends BaseNodeHandler
             } else {
                 // Use manual input value
                 $variableValue = $this->getData($node, 'variableValue');
-                if (empty($variableValue)) {
+                if ($variableValue === null || $variableValue === '') {
                     return $this->error('Variable value is required when not using extracted value');
                 }
-                // Replace variables in the value
-                $rawValue = $this->replaceVariables($variableValue, $variables);
+
+                // Replace variables in the value (only if it's a string)
+                if (is_string($variableValue)) {
+                    $rawValue = $this->replaceVariables($variableValue, $variables);
+                } else {
+                    $rawValue = $variableValue;
+                }
                 $message = "Variable '{$variableName}' set from manual input";
             }
 
             // Convert value based on type
             $finalValue = $this->convertValueType($rawValue, $valueType);
+
+            // Prepare value for storage (convert arrays/objects to JSON for cache)
+            $storageValue = $this->prepareForStorage($finalValue);
 
             $output = [$variableName => $finalValue];
 
@@ -49,35 +58,171 @@ class SetVariableHandler extends BaseNodeHandler
             if ($persistent) {
                 $cacheKey = "witchcraft_var_{$variableName}";
                 if (!empty($cacheExpiry) && is_numeric($cacheExpiry)) {
-                    Cache::put($cacheKey, $finalValue, now()->addMinutes((int)$cacheExpiry));
+                    Cache::put($cacheKey, $storageValue, now()->addMinutes((int)$cacheExpiry));
                     $message .= " in cache with {$cacheExpiry} minute expiry";
                 } else {
-                    Cache::forever($cacheKey, $finalValue);
+                    Cache::forever($cacheKey, $storageValue);
                     $message .= " in persistent cache";
                 }
             } else {
                 $message .= " in workflow memory";
             }
 
-            // APpend the 'extractedValue' to the output for edge routing
+            // Append the 'extractedValue' to the output for edge routing
             if (isset($variables['extractedValue'])) {
-                $output['extractedValue'] = $variables['extractedValue'];
+                $output['extractedValue'] = $finalValue;
                 $message .= " with extracted value";
             }
+
             return $this->success($output, $message);
         } catch (\Exception $e) {
             return $this->error("Failed to set variable: " . $e->getMessage());
         }
     }
 
+    /**
+     * Convert value based on specified type
+     */
     private function convertValueType($value, $type)
     {
         return match ($type) {
-            'number' => is_numeric($value) ? (float)$value : 0,
-            'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-            'json' => json_decode($value, true) ?: $value,
-            'array' => is_array($value) ? $value : explode(',', $value),
-            default => (string)$value
+            'number' => $this->convertToNumber($value),
+            'boolean' => $this->convertToBoolean($value),
+            'json' => $this->convertToJson($value),
+            'array' => $this->convertToArray($value),
+            'object' => $this->convertToObject($value),
+            default => $this->convertToString($value)
         };
+    }
+
+    /**
+     * Convert value to number
+     */
+    private function convertToNumber($value)
+    {
+        if (is_array($value) || is_object($value)) {
+            return 0; // Default for complex types
+        }
+        return is_numeric($value) ? (float)$value : 0;
+    }
+
+    /**
+     * Convert value to boolean
+     */
+    private function convertToBoolean($value)
+    {
+        if (is_array($value)) {
+            return !empty($value);
+        }
+        if (is_object($value)) {
+            return !empty((array)$value);
+        }
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Convert value to JSON string
+     */
+    private function convertToJson($value)
+    {
+        if (is_string($value)) {
+            // Check if it's already valid JSON
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $value; // Already valid JSON
+            }
+        }
+
+        // Convert to JSON
+        $json = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return $json !== false ? $json : json_encode(['error' => 'Failed to encode to JSON']);
+    }
+
+    /**
+     * Convert value to array
+     */
+    private function convertToArray($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_object($value)) {
+            return (array)$value;
+        }
+
+        if (is_string($value)) {
+            // Try to decode as JSON first
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+            // Otherwise split by comma
+            return array_map('trim', explode(',', $value));
+        }
+
+        return [$value]; // Wrap single values in array
+    }
+
+    /**
+     * Convert value to object
+     */
+    private function convertToObject($value)
+    {
+        if (is_object($value)) {
+            return $value;
+        }
+
+        if (is_array($value)) {
+            return (object)$value;
+        }
+
+        if (is_string($value)) {
+            // Try to decode as JSON first
+            $decoded = json_decode($value);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $decoded;
+            }
+        }
+
+        return (object)['value' => $value];
+    }
+
+    /**
+     * Convert value to string safely
+     */
+    private function convertToString($value)
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_null($value)) {
+            return '';
+        }
+
+        return (string)$value;
+    }
+
+    /**
+     * Prepare value for storage (cache requires serializable data)
+     */
+    private function prepareForStorage($value)
+    {
+        // For cache storage, we need to ensure the data is serializable
+        if (is_object($value)) {
+            // Convert objects to arrays for storage
+            return json_decode(json_encode($value), true);
+        }
+
+        return $value;
     }
 }

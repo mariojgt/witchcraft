@@ -145,6 +145,17 @@
                 <div class="text-xs text-blue-400/70">Enter the name of the variable you want to return (e.g., 'user.email').</div>
             </div>
 
+            <!-- NEW: Return Variable Name Configuration -->
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Return Variable Name</label>
+                <input v-model="data.returnVariableName"
+                       placeholder="returnValue"
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+                <div class="text-xs text-green-400/70">
+                    Set the name for the returned variable (defaults to 'returnValue'). This will be available in subsequent nodes.
+                </div>
+            </div>
+
             <div v-if="getReturnPreview()" class="bg-white/5 border border-white/10 rounded-lg p-3">
                 <div class="text-xs text-gray-400 mb-1">Preview:</div>
                 <div class="text-xs text-blue-300 font-mono">{{ getReturnPreview() }}</div>
@@ -161,9 +172,9 @@
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue' // Import 'watch'
+import { ref, nextTick, watch } from 'vue'
 import { Handle } from "@vue-flow/core"
-import { XIcon, MessageSquareIcon, SettingsIcon, CornerDownLeft, CheckIcon } from "lucide-vue-next" // Import CheckIcon
+import { XIcon, MessageSquareIcon, SettingsIcon, CornerDownLeft, CheckIcon } from "lucide-vue-next"
 import { defineOptions } from "vue"
 
 const props = defineProps(["data"])
@@ -177,7 +188,7 @@ const editingTitle = ref("")
 const titleInput = ref(null)
 const showTooltip = ref(false)
 
-// Color themes - Reusing the same themes as ConditionNode for consistency
+// Color themes
 const colorThemes = [
     { name: 'purple', label: 'Purple', gradient: 'linear-gradient(145deg, #8b5cf6, #7c3aed)' },
     { name: 'blue', label: 'Blue', gradient: 'linear-gradient(145deg, #3b82f6, #1d4ed8)' },
@@ -189,7 +200,7 @@ const colorThemes = [
     { name: 'orange', label: 'Orange', gradient: 'linear-gradient(145deg, #f97316, #ea580c)' }
 ]
 
-// Color theme functions - Adapted for 'blue' default
+// Color theme functions
 function getHeaderIconClass() {
     const theme = props.data.colorTheme || 'blue'
     const classes = {
@@ -220,13 +231,15 @@ function getIconColorClass() {
     return classes[theme] || classes.blue
 }
 
-// Return preview
+// Return preview - Updated to show both extractedValue and custom return variable
 function getReturnPreview() {
+    const returnVarName = props.data.returnVariableName || 'returnValue'
+
     if (props.data.useExtractedValue) {
-        return `Return: extractedValue`;
+        return `extractedValue → ${returnVarName}`;
     } else {
         const variable = props.data.variableToReturn || 'myVariable';
-        return `Return: ${variable}`;
+        return `${variable} → extractedValue, ${returnVarName}`;
     }
 }
 
@@ -235,7 +248,7 @@ watch(() => props.data.useExtractedValue, (newValue) => {
     if (newValue) {
         props.data.variableToReturn = 'extractedValue';
     }
-}, { immediate: true }); // immediate: true ensures it runs on component mount
+}, { immediate: true });
 
 // Comment functions
 function toggleComment() {
@@ -279,8 +292,9 @@ defineOptions({
         icon: CornerDownLeft,
         label: "Return",
         initialData: {
-            useExtractedValue: true, // Default to true as requested
-            variableToReturn: "extractedValue", // Will be set by watch if useExtractedValue is true
+            useExtractedValue: true,
+            variableToReturn: "extractedValue",
+            returnVariableName: "returnValue", // NEW: Default return variable name
             customTitle: "",
             customDescription: "",
             comment: "",

@@ -20,6 +20,9 @@ class NodeHandlerFactory
         'modellookup' => ModelLookupHandler::class,
         'datecondition' => DateConditionHandler::class,
         'return' => ReturnHandler::class,
+        'flowvariable' => FlowVariableHandler::class,
+        'combinevariables' => CombineVariablesHandler::class,
+        'comment' => CommentHandler::class,
     ];
 
     public static function create($nodeType)

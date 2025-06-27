@@ -1,4 +1,20 @@
-<template>
+/* Scrollbar styling */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}<template>
     <div :class="`bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-5 min-w-[320px] relative shadow-2xl transition-all duration-300 node-${data.colorTheme || 'purple'}`">
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
@@ -31,7 +47,7 @@
 
                     <div class="flex items-center gap-2 mt-0.5">
                         <p class="text-xs text-gray-400 leading-none truncate">
-                            {{ data.customDescription || 'Fetch a record by ID from a database model' }}
+                            {{ data.customDescription || 'Fetch a record by field from a database model' }}
                         </p>
                         <!-- Comment indicator with hover tooltip -->
                         <div v-if="data.comment && data.comment.trim()"
@@ -59,6 +75,17 @@
 
             <!-- Action buttons -->
             <div class="flex items-center gap-1 ml-2">
+                <!-- Variable browser button -->
+                <button @click="toggleVariableBrowser"
+                        :class="`w-8 h-8 rounded-lg transition-all duration-200 flex items-center justify-center group ${
+                            showVariableBrowser
+                                ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                                : 'hover:bg-purple-500/10 text-gray-400 hover:text-purple-400'
+                        }`"
+                        title="Browse Variables">
+                    <SearchIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </button>
+
                 <!-- Comment button -->
                 <button @click="toggleComment"
                         :class="`w-8 h-8 rounded-lg transition-all duration-200 flex items-center justify-center group ${
@@ -82,6 +109,64 @@
                         class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-200 flex items-center justify-center group">
                     <XIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
                 </button>
+            </div>
+        </div>
+
+        <!-- Variable Browser Panel -->
+        <div v-if="showVariableBrowser" class="mb-4 p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg space-y-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <SearchIcon class="w-4 h-4 text-purple-400" />
+                    <span class="text-sm font-medium text-purple-400">Available Variables</span>
+                </div>
+                <span class="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded">
+                    {{ Object.keys(variables || {}).length }} variables
+                </span>
+            </div>
+
+            <div class="max-h-32 overflow-y-auto space-y-1">
+                <div v-if="Object.keys(variables || {}).length === 0" class="text-center py-4 text-gray-400">
+                    <div class="text-sm">No variables available</div>
+                </div>
+                <div v-for="(value, key) in variables"
+                     :key="key"
+                     class="space-y-1">
+                    <!-- Main variable -->
+                    <div @click="selectVariable(key)"
+                         class="p-2 rounded cursor-pointer transition-all duration-200 bg-white/5 hover:bg-white/10 border border-white/10">
+                        <div class="flex items-center justify-between">
+                            <code class="text-purple-300 text-sm font-mono">{{ key }}</code>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded">
+                                    {{ getValueType(value) }}
+                                </span>
+                                <button v-if="canExpand(value)"
+                                        @click.stop="toggleExpanded(key)"
+                                        class="text-xs text-purple-400 hover:text-purple-300">
+                                    {{ expandedVariables[key] ? '−' : '+' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nested properties -->
+                    <div v-if="expandedVariables[key] && canExpand(value)" class="ml-4 space-y-1">
+                        <div v-for="(nestedValue, nestedKey) in getNestedProperties(value)"
+                             :key="`${key}.${nestedKey}`"
+                             @click="selectVariable(`${key}.${nestedKey}`)"
+                             class="p-2 rounded cursor-pointer transition-all duration-200 bg-white/3 hover:bg-white/8 border border-white/5">
+                            <div class="flex items-center justify-between">
+                                <code class="text-purple-200 text-xs font-mono">{{ key }}.{{ nestedKey }}</code>
+                                <span class="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">
+                                    {{ getValueType(nestedValue) }}
+                                </span>
+                            </div>
+                            <div v-if="nestedValue !== null && nestedValue !== undefined" class="text-xs text-gray-400 mt-1 truncate">
+                                {{ formatPreviewValue(nestedValue) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -146,21 +231,54 @@
         <div class="space-y-4">
             <div class="space-y-2">
                 <label class="block text-xs font-medium text-gray-300 tracking-wide">Model</label>
-                <select v-model="data.modelName" @change="data.recordId = ''; data.sourceVariable = '';" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none">
+                <select v-model="data.modelName" @change="clearInputs" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none">
                     <option value="">Select a model</option>
                     <option v-for="model in availableModels" :key="model" :value="model">{{ model }}</option>
                 </select>
             </div>
 
             <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Search Field</label>
+                <input v-model="data.searchField"
+                       type="text"
+                       placeholder="e.g., id, slug, product_id, email"
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
+                <div class="text-xs text-purple-400/70">Field to search by (defaults to 'id' if empty)</div>
+            </div>
+
+            <div class="space-y-2">
                 <label class="block text-xs font-medium text-gray-300 tracking-wide">Source Variable (Optional)</label>
-                <input v-model="data.sourceVariable" type="text" placeholder="e.g., extractedId, userId" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" @input="data.recordId = '';" />
-                <div class="text-xs text-purple-400/70">Use {{variableName}} to reference other variables</div>
+                <div class="relative">
+                    <input v-model="data.sourceVariable"
+                           type="text"
+                           placeholder="e.g., extractedId, userId, report_data.product.id"
+                           @focus="showVariableBrowser = true"
+                           class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none"
+                           @input="data.searchValue = '';" />
+
+                    <!-- Variable exists indicator -->
+                    <div v-if="data.sourceVariable && getVariableExists(data.sourceVariable)"
+                         class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full" title="Variable found"></div>
+                    </div>
+                    <div v-else-if="data.sourceVariable"
+                         class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div class="w-2 h-2 bg-yellow-500 rounded-full" title="Variable not found"></div>
+                    </div>
+                </div>
+                <div class="text-xs text-purple-400/70">Use {{variableName}} to reference other variables (supports dot notation)</div>
+
+                <!-- Live preview for source variable -->
+                <div v-if="data.sourceVariable && getVariableValue(data.sourceVariable) !== undefined"
+                     class="text-xs bg-gray-800 p-2 rounded">
+                    <span class="text-gray-400">Current value:</span>
+                    <span class="text-green-300 ml-2">{{ formatPreviewValue(getVariableValue(data.sourceVariable)) }}</span>
+                </div>
             </div>
 
             <div class="space-y-2" v-if="!data.sourceVariable">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">Record ID (Direct Input)</label>
-                <input v-model="data.recordId" type="text" placeholder="e.g., 123, abc-xyz" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Search Value (Direct Input)</label>
+                <input v-model="data.searchValue" type="text" placeholder="e.g., 123, my-product-slug, user@email.com" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
             </div>
 
             <div class="space-y-2">
@@ -169,9 +287,37 @@
             </div>
 
             <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">Load Relationships (Optional)</label>
+                <input v-model="data.withRelations" placeholder="e.g., profile, posts.comments, category.parent" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
+                <div class="text-xs text-purple-400/70">Comma-separated list of relationships to eager load (uses Eloquent models)</div>
+            </div>
+
+            <div class="space-y-2">
                 <label class="block text-xs font-medium text-gray-300 tracking-wide">Field to Extract (Optional)</label>
-                <input v-model="data.fieldToExtract" placeholder="e.g., name, email, id (leave empty for full record)" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
-                <div class="text-xs text-purple-400/70">Specify a field name to return only that field value, or leave empty to return the entire record</div>
+                <input v-model="data.fieldToExtract" placeholder="e.g., name, email, profile.avatar, posts.0.title" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 outline-none" />
+                <div class="text-xs text-purple-400/70">Field name to extract (supports dot notation for nested fields) or leave empty for full record</div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="flex items-center gap-2 text-xs font-medium text-gray-300 tracking-wide">
+                    <input type="checkbox" v-model="data.useEloquent" class="w-4 h-4 text-purple-600 bg-white/5 border border-white/10 rounded focus:ring-purple-500 focus:ring-2" />
+                    Force Eloquent Usage
+                </label>
+                <div class="text-xs text-purple-400/70">Enable to use Eloquent models even without relationships (provides better data handling)</div>
+            </div>
+
+            <!-- Search Example Display -->
+            <div v-if="data.modelName && (data.searchField || data.sourceVariable || data.searchValue)" class="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                <div class="text-xs font-medium text-blue-400 mb-1">Query Preview:</div>
+                <div class="text-xs text-gray-300 font-mono mb-2">
+                    {{ getQueryPreview() }}
+                </div>
+                <div v-if="data.withRelations" class="text-xs text-green-400">
+                    <span class="font-medium">With relationships:</span> {{ data.withRelations }}
+                </div>
+                <div v-if="data.fieldToExtract" class="text-xs text-yellow-400">
+                    <span class="font-medium">Extract field:</span> {{ data.fieldToExtract }}
+                </div>
             </div>
 
             <!-- Output indicators for true/false paths -->
@@ -208,9 +354,9 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue';
 import { Handle } from '@vue-flow/core';
-import { XIcon, MessageSquareIcon, SettingsIcon } from "lucide-vue-next"
+import { XIcon, MessageSquareIcon, SettingsIcon, SearchIcon } from "lucide-vue-next"
 
-const props = defineProps(['data']);
+const props = defineProps(['data', 'variables']);
 const emit = defineEmits(['delete']);
 
 const availableModels = ref([]);
@@ -218,10 +364,12 @@ const availableModels = ref([]);
 // UI state
 const showComment = ref(false)
 const showSettings = ref(false)
+const showVariableBrowser = ref(false)
 const isEditingTitle = ref(false)
 const editingTitle = ref("")
 const titleInput = ref(null)
 const showTooltip = ref(false)
+const expandedVariables = ref({})
 
 // Color themes
 const colorThemes = [
@@ -234,6 +382,113 @@ const colorThemes = [
     { name: 'gray', label: 'Gray', gradient: 'linear-gradient(145deg, #6b7280, #4b5563)' },
     { name: 'orange', label: 'Orange', gradient: 'linear-gradient(145deg, #f97316, #ea580c)' }
 ]
+
+// Helper functions
+function clearInputs() {
+    props.data.searchValue = '';
+    props.data.sourceVariable = '';
+    props.data.searchField = '';
+    props.data.withRelations = '';
+}
+
+function getSearchValuePreview() {
+    if (props.data.sourceVariable) {
+        return `{{${props.data.sourceVariable}}}`;
+    }
+    return props.data.searchValue || 'search_value';
+}
+
+function getQueryPreview() {
+    const useEloquent = props.data.useEloquent || props.data.withRelations;
+    const modelName = props.data.modelName;
+    const searchField = props.data.searchField || 'id';
+    const searchValue = getSearchValuePreview();
+
+    if (useEloquent) {
+        let preview = `${modelName}::where('${searchField}', '${searchValue}')`;
+        if (props.data.withRelations) {
+            preview += `.with([${props.data.withRelations.split(',').map(r => `'${r.trim()}'`).join(', ')}])`;
+        }
+        preview += '.first()';
+        return preview;
+    } else {
+        return `SELECT * FROM ${modelName} WHERE ${searchField} = '${searchValue}'`;
+    }
+}
+
+// Variable browser functions
+function selectVariable(variablePath) {
+    props.data.sourceVariable = variablePath;
+    props.data.searchValue = ''; // Clear direct input when using variable
+    showVariableBrowser.value = false;
+}
+
+function toggleVariableBrowser() {
+    showVariableBrowser.value = !showVariableBrowser.value;
+    showComment.value = false;
+    showSettings.value = false;
+}
+
+function getVariableExists(source) {
+    if (!source || !props.variables) return false;
+    return getVariableValue(source) !== undefined;
+}
+
+function getVariableValue(source) {
+    if (!source || !props.variables) return undefined;
+
+    // Handle dot notation (e.g., user.email, report_data.product.id)
+    if (source.includes('.')) {
+        const parts = source.split('.');
+        let value = props.variables[parts[0]];
+
+        for (let i = 1; i < parts.length && value != null; i++) {
+            if (typeof value === 'object' && value !== null) {
+                value = value[parts[i]];
+            } else {
+                return undefined;
+            }
+        }
+
+        return value;
+    }
+
+    return props.variables[source];
+}
+
+function canExpand(value) {
+    return value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toggleExpanded(key) {
+    expandedVariables.value[key] = !expandedVariables.value[key];
+}
+
+function getNestedProperties(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return {};
+
+    const result = {};
+    Object.keys(obj).forEach(key => {
+        result[key] = obj[key];
+    });
+    return result;
+}
+
+function getValueType(value) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (Array.isArray(value)) return `array[${value.length}]`;
+    if (typeof value === 'object') return 'object';
+    return typeof value;
+}
+
+function formatPreviewValue(value) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+
+    const str = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    return str.length > 30 ? str.substring(0, 30) + '...' : str;
+}
 
 // Color theme functions
 function getHeaderIconClass() {
@@ -270,6 +525,7 @@ function getIconColorClass() {
 function toggleComment() {
     showComment.value = !showComment.value
     showSettings.value = false
+    showVariableBrowser.value = false
 }
 
 function saveComment() {
@@ -280,6 +536,7 @@ function saveComment() {
 function toggleSettings() {
     showSettings.value = !showSettings.value
     showComment.value = false
+    showVariableBrowser.value = false
 }
 
 // Title editing functions
@@ -328,9 +585,13 @@ defineOptions({
     label: 'Model Lookup',
     initialData: {
       modelName: '',
-      recordId: '', // Direct input for record ID
-      sourceVariable: '', // Variable name for record ID
+      searchField: '', // Field to search by
+      searchValue: '', // Direct input for search value
+      sourceVariable: '', // Variable name for search value
+      withRelations: '', // Relationships to eager load
+      useEloquent: false, // Force Eloquent usage
       outputKey: 'fetchedRecord',
+      fieldToExtract: '', // Field to extract from the found record (supports dot notation)
       // Enhanced properties
       customTitle: "",
       customDescription: "",

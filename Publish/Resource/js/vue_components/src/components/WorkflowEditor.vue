@@ -392,6 +392,9 @@
                                 { 'simulation-active': simulationState.isRunning }
                             ]"
                             :output="nodeOutputs[nodeProps.id]"
+                            :variables="simulationState.variables"
+                            :simulation-logs="simulationLogs"
+                            :current-node-id="simulationState.currentNodeId"
                             @delete="() => removeNode(nodeProps.id)"
                         />
                     </template>
@@ -460,7 +463,7 @@
                             {{ pauseState.isPaused ? 'Paused at: ' : '' }}{{ currentNodeInfo.description || 'Processing...' }}
                         </div>
                         <!-- currentNodeInfo add the for each loop check if a option and create a json scruter -->
-                        <div v-if="simulationState.variables" class="mt-2 text-xs text-gray-400">
+                        <div v-if="simulationState.variables" class="mt-2 text-xs text-gray-400 scrollbar max-h-32 overflow-y-auto">
                             <pre class="bg-gray-800 p-2 rounded">{{ JSON.stringify(simulationState.variables, null, 2) }}</pre>
                         </div>
 
