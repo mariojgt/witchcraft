@@ -12,6 +12,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->string('category')->nullable();
+            $table->string('icon')->nullable();
+            $table->string('trigger_code')->unique()->nullable();
             $table->longText('nodes'); // Using longText for larger JSON data
             $table->longText('edges'); // Using longText for larger JSON data
             $table->boolean('is_active')->default(true);

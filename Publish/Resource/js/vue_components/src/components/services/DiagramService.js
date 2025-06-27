@@ -1,7 +1,10 @@
 export default class DiagramService {
-    static async fetchAll() {
+    static async fetchAll(params = {}) {
         try {
-            const response = await fetch('/api/witchcraft/diagrams'); // Updated route
+            const queryString = new URLSearchParams(params).toString();
+            const url = `/api/witchcraft/diagrams${queryString ? `?${queryString}` : ''}`;
+
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -25,7 +28,7 @@ export default class DiagramService {
 
     static async fetch(id) {
         try {
-            const response = await fetch(`/api/witchcraft/diagrams/${id}`); // Updated route
+            const response = await fetch(`/api/witchcraft/diagrams/${id}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -48,7 +51,7 @@ export default class DiagramService {
 
     static async store(data) {
         try {
-            const response = await fetch('/api/witchcraft/diagrams', { // Updated route
+            const response = await fetch('/api/witchcraft/diagrams', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -58,8 +61,11 @@ export default class DiagramService {
                 body: JSON.stringify({
                     name: data.name,
                     description: data.description,
-                    nodes: JSON.stringify(data.nodes),     // Keep JSON.stringify to save as string
-                    edges: JSON.stringify(data.edges)      // Keep JSON.stringify to save as string
+                    category: data.category || 'General',
+                    icon: data.icon || 'WorkflowIcon',
+                    trigger_code: data.trigger_code || null,
+                    nodes: JSON.stringify(data.nodes),
+                    edges: JSON.stringify(data.edges)
                 })
             });
 
@@ -78,7 +84,7 @@ export default class DiagramService {
 
     static async update(id, data) {
         try {
-            const response = await fetch(`/api/witchcraft/diagrams/${id}`, { // Updated route
+            const response = await fetch(`/api/witchcraft/diagrams/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -88,8 +94,11 @@ export default class DiagramService {
                 body: JSON.stringify({
                     name: data.name,
                     description: data.description,
-                    nodes: JSON.stringify(data.nodes),     // Keep JSON.stringify to save as string
-                    edges: JSON.stringify(data.edges)      // Keep JSON.stringify to save as string
+                    category: data.category || 'General',
+                    icon: data.icon || 'WorkflowIcon',
+                    trigger_code: data.trigger_code || null,
+                    nodes: JSON.stringify(data.nodes),
+                    edges: JSON.stringify(data.edges)
                 })
             });
 
@@ -106,7 +115,7 @@ export default class DiagramService {
 
     static async destroy(id) {
         try {
-            const response = await fetch(`/api/witchcraft/diagrams/${id}`, { // Updated route
+            const response = await fetch(`/api/witchcraft/diagrams/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
@@ -122,6 +131,86 @@ export default class DiagramService {
             return true;
         } catch (error) {
             console.error('Error deleting diagram:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get available categories
+     */
+    static async getCategories() {
+        try {
+            const response = await fetch('/api/witchcraft/categories');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Execute flow by trigger code
+     */
+    static async executeByTriggerCode(triggerCode, data = {}) {
+        try {
+            const response = await fetch(`/api/witchcraft/execute-trigger/${triggerCode}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify({ data })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to execute flow');
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Error executing flow by trigger code:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get diagrams for selection dropdown
+     */
+    static async forSelection(params = {}) {
+        try {
+            const queryString = new URLSearchParams(params).toString();
+            const url = `/api/witchcraft/diagrams-for-selection${queryString ? `?${queryString}` : ''}`;
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Error fetching diagrams for selection:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get flow statistics
+     */
+    static async getStatistics() {
+        try {
+            const response = await fetch('/api/witchcraft/flow-statistics');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Error fetching flow statistics:', error);
             throw error;
         }
     }

@@ -15,16 +15,19 @@ Route::middleware(config('witchcraft.editor_middlewares', ['web']))
 Route::middleware(config('witchcraft.editor_middlewares', ['web']))
     ->prefix('api/witchcraft')
     ->group(function () {
+
         // Flow diagram CRUD
         Route::apiResource('diagrams', FlowDiagramController::class);
 
         // Enhanced flow endpoints
         Route::get('diagrams-for-selection', [FlowDiagramController::class, 'forSelection']);
         Route::get('flow-statistics', [FlowDiagramController::class, 'statistics']);
+        Route::get('categories', [FlowDiagramController::class, 'categories']);
 
-        // Flow execution
+        // Flow execution endpoints
         Route::post('diagrams/{diagram}/execute', [FlowDiagramController::class, 'execute']);
         Route::post('execute-flow/{flowId}', [FlowDiagramController::class, 'executeById']);
+        Route::post('execute-trigger/{triggerCode}', [FlowDiagramController::class, 'executeByTriggerCode']);
         Route::post('simulate-node', [FlowDiagramController::class, 'simulateNode']);
 
         // Model utilities

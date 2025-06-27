@@ -214,14 +214,6 @@
                     <div class="w-px h-6 bg-gray-700 mx-1"></div>
 
                     <button
-                        @click="toggleLogs"
-                        class="p-2 rounded-lg hover:bg-[#1a1a1a] text-gray-400 hover:text-white transition-colors"
-                        title="Toggle Logs"
-                    >
-                        <ListIcon class="w-4 h-4" />
-                    </button>
-
-                    <button
                         @click="clearLogs"
                         class="p-2 rounded-lg hover:bg-[#1a1a1a] text-gray-400 hover:text-white transition-colors"
                         title="Clear Logs"
@@ -235,6 +227,7 @@
                     <span v-if="selectedNodes.length > 0">{{ selectedNodes.length }} selected</span>
                     <span>{{ nodes.length }} nodes</span>
                     <span>{{ edges.length }} connections</span>
+                    <span v-if="currentDiagramData.name" class="text-blue-400">{{ currentDiagramData.name }}</span>
                 </div>
 
                 <!-- Right Actions -->
@@ -276,7 +269,7 @@
                                 <UploadIcon class="w-4 h-4 inline mr-2" />
                                 Import JSON
                             </button>
-                            <button @click="showSaveDialog = true; showExportMenu = false" class="w-full text-left px-3 py-2 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors last:rounded-b-lg">
+                            <button @click="openSaveDialog(); showExportMenu = false" class="w-full text-left px-3 py-2 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors last:rounded-b-lg">
                                 <SaveIcon class="w-4 h-4 inline mr-2" />
                                 Save to Database
                             </button>
@@ -385,74 +378,24 @@
         </div>
 
         <!-- File Management Modal -->
-        <div v-if="showSidebar" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div class="bg-[#111] border border-gray-700 rounded-xl w-[600px] max-h-[80vh] overflow-hidden">
-                <div class="p-6 border-b border-gray-800">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-semibold text-white">Workflow Files</h2>
-                        <button @click="showSidebar = false" class="text-gray-400 hover:text-white">
-                            <XIcon class="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
+        <FileManagementModal
+            :show="showSidebar"
+            :diagrams="savedDiagrams"
+            :loading="loadingDiagrams"
+            @close="showSidebar = false"
+            @load-diagram="loadDiagram"
+            @delete-diagram="deleteDiagram"
+            @create-new="createNewWorkflow"
+        />
 
-                <div class="p-6 max-h-96 overflow-y-auto">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div v-for="diagram in savedDiagrams" :key="diagram.id"
-                            class="p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg hover:border-gray-600 cursor-pointer transition-colors"
-                            @click="loadDiagram(diagram)">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-medium text-white">{{ diagram.name }}</h3>
-                                <button @click.stop="deleteDiagram(diagram)" class="text-red-400 hover:text-red-300">
-                                    <TrashIcon class="w-4 h-4" />
-                                </button>
-                            </div>
-                            <p class="text-sm text-gray-400">{{ diagram.description || 'No description' }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-6 border-t border-gray-800 flex justify-end gap-3">
-                    <button @click="showSidebar = false" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
-                        Close
-                    </button>
-                    <button @click="createNewWorkflow" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500">
-                        New Workflow
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Save Modal -->
-        <div v-if="showSaveDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div class="bg-[#111] border border-gray-700 rounded-xl w-96 mx-4">
-                <div class="p-6 border-b border-gray-800">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-lg font-semibold text-white">Save Workflow</h2>
-                        <button @click="showSaveDialog = false" class="text-gray-400 hover:text-white">
-                            <XIcon class="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-
-                <div class="p-6 space-y-4">
-                    <input v-model="diagramName" type="text" placeholder="Workflow name"
-                           class="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none" />
-
-                    <textarea v-model="diagramDescription" placeholder="Description (optional)" rows="3"
-                              class="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-700 rounded-lg text-white placeholder-gray-400 resize-none focus:border-blue-500 focus:outline-none"></textarea>
-                </div>
-
-                <div class="p-6 border-t border-gray-800 flex justify-end gap-3">
-                    <button @click="showSaveDialog = false" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
-                        Cancel
-                    </button>
-                    <button @click="saveDiagram" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500">
-                        Save
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- Enhanced Save Modal -->
+        <EnhancedSaveDialog
+            :show="showSaveDialog"
+            :initial-data="currentDiagramData"
+            :is-update="!!currentDiagramId"
+            @close="showSaveDialog = false"
+            @save="saveDiagram"
+        />
     </div>
 </template>
 
@@ -470,6 +413,8 @@ import {
 import DiagramService from './services/DiagramService';
 import SimulationService from './services/SimulationService';
 import SimulationLogs from './SimulationLogs.vue';
+import FileManagementModal from './FileManagementModal.vue';
+import EnhancedSaveDialog from './EnhancedSaveDialog.vue';
 
 // Core state
 const nodes = ref([]);
@@ -486,20 +431,20 @@ const showSidebar = ref(false);
 const showExportMenu = ref(false);
 const savedDiagrams = ref([]);
 const currentDiagramId = ref(null);
-const diagramName = ref('');
-const diagramDescription = ref('');
+const currentDiagramData = ref({});
 const searchQuery = ref('');
 const searchInput = ref(null);
 
 // Enhanced features state
 const clipboard = ref([]);
 const history = reactive({ past: [], future: [] });
+const loadingDiagrams = ref(false);
 
 // Node library state
 const nodeTypes = reactive([]);
 const expandedCategories = reactive({});
 
-// Simulation state (keeping original functionality)
+// Simulation state
 const showLogs = ref(true);
 const simulationSpeed = ref(1000);
 const simulationLogs = ref([]);
@@ -512,10 +457,10 @@ const simulationState = reactive({
     variables: {}
 });
 
-// Initialize Services (keeping original)
+// Initialize Services
 const simulationService = new SimulationService();
 
-// Setup simulation service callbacks (keeping original)
+// Setup simulation service callbacks
 simulationService.onNodeStatusChange = (statuses, currentNodeId) => {
     console.log('Status Update:', { statuses, currentNodeId });
     simulationState.nodeStatuses = { ...statuses };
@@ -641,7 +586,6 @@ function onPaneClick() {
 
 // Copy/Paste functionality
 function copySelected() {
-    // Get selected nodes from both sources to ensure we have them
     const nodesToCopy = selectedNodes.value.length > 0
         ? selectedNodes.value
         : nodes.value.filter(node => node.selected);
@@ -651,13 +595,9 @@ function copySelected() {
         return;
     }
 
-    // Clear clipboard first to prevent stale data
     clipboard.value = [];
-
-    // Deep clone the selected nodes with new IDs
     clipboard.value = nodesToCopy.map(node => ({
-        ...JSON.parse(JSON.stringify(node)), // Deep clone to prevent reference issues
-        // Don't generate new ID here - do it during paste instead
+        ...JSON.parse(JSON.stringify(node))
     }));
 
     console.log(`Copied ${clipboard.value.length} nodes:`, clipboard.value.map(n => n.id));
@@ -671,10 +611,9 @@ function pasteNodes() {
 
     saveToHistory();
 
-    // Generate fresh nodes from clipboard with unique IDs
     const timestamp = Date.now();
     const pastedNodes = clipboard.value.map((node, index) => ({
-        ...JSON.parse(JSON.stringify(node)), // Deep clone
+        ...JSON.parse(JSON.stringify(node)),
         id: `${node.type}-${timestamp}-${index}-${Math.random().toString(36).substr(2, 9)}`,
         position: {
             x: node.position.x + 50,
@@ -683,19 +622,14 @@ function pasteNodes() {
         selected: true
     }));
 
-    // Clear current selection
     nodes.value = nodes.value.map(node => ({ ...node, selected: false }));
-
-    // Add new nodes
     addNodes(pastedNodes);
-
-    // Update selection state
     selectedNodes.value = pastedNodes;
 
     console.log(`Pasted ${pastedNodes.length} nodes from clipboard:`, pastedNodes.map(n => n.id));
 }
 
-// Icon Helper Functions (keeping original Controls functionality)
+// Icon Helper Functions
 function isLucideIcon(icon) {
     if (!icon) return false;
     return typeof icon === 'string' && icon.endsWith('Icon') && icon in LucideIcons;
@@ -713,15 +647,11 @@ function getLucideIcon(iconName) {
 function sanitizeSvg(svg) {
     if (!svg) return '';
 
-    // Remove scripts
     svg = svg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    // Remove event handlers
     svg = svg.replace(/\son\w+="[^"]*"/g, '');
-    // Add sizing class
     if (!svg.includes('class="')) {
         svg = svg.replace('<svg', '<svg class="w-5 h-5"');
     }
-    // Ensure currentColor is used for strokes
     if (!svg.includes('stroke="currentColor"')) {
         svg = svg.replace(/stroke="[^"]*"/g, 'stroke="currentColor"');
         if (!svg.includes('stroke=')) {
@@ -763,7 +693,7 @@ function addNodeToCenter(nodeType) {
     selectedNodes.value = [newNode];
 }
 
-// Enhanced drop with smooth positioning (keeping original functionality)
+// Enhanced drop with smooth positioning
 function onDrop(event) {
     event.preventDefault();
     const nodeTypeData = event.dataTransfer.getData('application/nodeType');
@@ -792,7 +722,7 @@ function onDrop(event) {
     selectedNodes.value = [newNode];
 }
 
-// Enhanced node interaction (keeping Alt+click functionality)
+// Enhanced node interaction
 function onNodeClick(event) {
     const { node, event: clickEvent } = event;
 
@@ -819,9 +749,7 @@ function onEdgeClick(event) {
     }
 }
 
-// Keep original double-click functionality
 function onNodeDoubleClick(event) {
-    // Don't disconnect if double-clicking on input/textarea/select elements
     if (event.event?.target?.tagName?.toLowerCase() === 'input' ||
         event.event?.target?.tagName?.toLowerCase() === 'textarea' ||
         event.event?.target?.tagName?.toLowerCase() === 'select') {
@@ -847,7 +775,6 @@ function removeNode(nodeId) {
     delete nodeOutputs[nodeId];
 }
 
-// Keep original node class functionality
 function getNodeClass(nodeProps) {
     console.log('Node Status:', {
         id: nodeProps.id,
@@ -869,7 +796,7 @@ function getNodeClass(nodeProps) {
     };
 }
 
-// Keep original simulation functions
+// Simulation functions
 function toggleLogs() {
     showLogs.value = !showLogs.value;
 }
@@ -918,7 +845,7 @@ function resetSimulationState() {
     }));
 }
 
-// Keep original workflow management functions
+// Workflow management functions
 function createNewWorkflow() {
     if (nodes.value.length > 0 && !confirm('Create new workflow? Current work will be lost.')) {
         return;
@@ -929,8 +856,7 @@ function createNewWorkflow() {
     selectedNodes.value = [];
     selectedEdges.value = [];
     currentDiagramId.value = null;
-    diagramName.value = '';
-    diagramDescription.value = '';
+    currentDiagramData.value = {};
     showSidebar.value = false;
 
     history.past = [];
@@ -941,10 +867,13 @@ function createNewWorkflow() {
 
 async function loadSavedDiagrams() {
     try {
+        loadingDiagrams.value = true;
         savedDiagrams.value = await DiagramService.fetchAll();
     } catch (error) {
         console.error('Failed to load diagrams:', error);
         alert('Failed to load saved diagrams');
+    } finally {
+        loadingDiagrams.value = false;
     }
 }
 
@@ -956,8 +885,13 @@ async function loadDiagram(diagram) {
         selectedNodes.value = [];
         selectedEdges.value = [];
         currentDiagramId.value = diagram.id;
-        diagramName.value = diagram.name;
-        diagramDescription.value = diagram.description || '';
+        currentDiagramData.value = {
+            name: diagram.name,
+            description: diagram.description || '',
+            category: diagram.category || 'General',
+            icon: diagram.icon || 'WorkflowIcon',
+            trigger_code: diagram.trigger_code || ''
+        };
         showSidebar.value = false;
 
         history.past = [];
@@ -991,48 +925,65 @@ async function deleteDiagram(diagram) {
     }
 }
 
-async function saveDiagram() {
-    if (!diagramName.value.trim()) {
-        alert('Please enter a workflow name');
-        return;
+function openSaveDialog() {
+    // Set current diagram data for the save dialog
+    if (currentDiagramId.value && currentDiagramData.value.name) {
+        // Updating existing diagram
+        showSaveDialog.value = true;
+    } else {
+        // Creating new diagram
+        currentDiagramData.value = {
+            name: '',
+            description: '',
+            category: 'General',
+            icon: 'WorkflowIcon',
+            trigger_code: ''
+        };
+        showSaveDialog.value = true;
     }
+}
 
+async function saveDiagram(formData) {
     try {
         const diagramData = {
-            name: diagramName.value,
-            description: diagramDescription.value,
+            name: formData.name,
+            description: formData.description,
+            category: formData.category,
+            icon: formData.icon,
+            trigger_code: formData.trigger_code,
             nodes: nodes.value,
             edges: edges.value
         };
 
         if (currentDiagramId.value) {
             await DiagramService.update(currentDiagramId.value, diagramData);
-            alert('Diagram updated successfully');
+            alert('Workflow updated successfully!');
         } else {
             const newDiagram = await DiagramService.store(diagramData);
             currentDiagramId.value = newDiagram.id;
-            alert('Diagram created successfully');
+            alert('Workflow saved successfully!');
         }
+
+        // Update current diagram data
+        currentDiagramData.value = { ...formData };
 
         await loadSavedDiagrams();
         showSaveDialog.value = false;
-
-        if (!currentDiagramId.value) {
-            diagramName.value = '';
-            diagramDescription.value = '';
-        }
     } catch (error) {
         console.error('Failed to save diagram:', error);
         alert(`Failed to ${currentDiagramId.value ? 'update' : 'save'} diagram`);
     }
 }
 
-// Keep original export/import functions
+// Export/import functions
 function exportFlow() {
     const flowData = {
         nodes: nodes.value,
         edges: edges.value,
-        name: diagramName.value || 'workflow',
+        name: currentDiagramData.value.name || 'workflow',
+        category: currentDiagramData.value.category || 'General',
+        icon: currentDiagramData.value.icon || 'WorkflowIcon',
+        trigger_code: currentDiagramData.value.trigger_code || '',
         metadata: {
             exportedAt: new Date().toISOString(),
             version: '1.0'
@@ -1046,7 +997,7 @@ function exportFlow() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${diagramName.value || 'workflow'}.json`;
+    a.download = `${currentDiagramData.value.name || 'workflow'}.json`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -1071,7 +1022,13 @@ function importFlow() {
 
             nodes.value = data.nodes || [];
             edges.value = data.edges || [];
-            diagramName.value = data.name || '';
+            currentDiagramData.value = {
+                name: data.name || '',
+                description: data.description || '',
+                category: data.category || 'General',
+                icon: data.icon || 'WorkflowIcon',
+                trigger_code: data.trigger_code || ''
+            };
             selectedNodes.value = [];
             selectedEdges.value = [];
 
@@ -1088,9 +1045,8 @@ function importFlow() {
     input.click();
 }
 
-// Enhanced keyboard shortcuts - Fixed event handling
+// Enhanced keyboard shortcuts
 function handleKeyDown(event) {
-    // Allow normal behavior in input fields
     if (event.target.tagName === 'INPUT' ||
         event.target.tagName === 'TEXTAREA' ||
         event.target.tagName === 'SELECT') {
@@ -1103,7 +1059,7 @@ function handleKeyDown(event) {
         case 'c':
             if (isCmd) {
                 event.preventDefault();
-                copySelected(); // Always try to copy when Cmd+C is pressed
+                copySelected();
             }
             break;
 
@@ -1124,6 +1080,30 @@ function handleKeyDown(event) {
                 selectedNodes.value = [];
             }
             break;
+
+        case 'a':
+            if (isCmd) {
+                event.preventDefault();
+                selectAllNodes();
+            }
+            break;
+
+        case 'z':
+            if (isCmd && !event.shiftKey) {
+                event.preventDefault();
+                undo();
+            } else if (isCmd && event.shiftKey) {
+                event.preventDefault();
+                redo();
+            }
+            break;
+
+        case 'y':
+            if (isCmd) {
+                event.preventDefault();
+                redo();
+            }
+            break;
     }
 }
 
@@ -1133,22 +1113,18 @@ function handleClickOutside(event) {
     }
 }
 
-// Load node components (keeping original functionality)
+// Load node components
 onMounted(async () => {
     try {
-        // ONLY CHANGE THIS LINE - add { eager: true }
         const defaultNodeFiles = import.meta.glob('./nodes/*.vue', { eager: true });
 
         for (const path in defaultNodeFiles) {
             const fileName = path.split('/').pop().replace('.vue', '');
             const nodeType = fileName.toLowerCase().replace('node', '');
-            // CHANGE: Remove await since it's already loaded
             const module = defaultNodeFiles[path];
 
-            // Register component
             nodeComponents[nodeType] = markRaw(module.default);
 
-            // Add to node library with enhanced metadata
             const metadata = module.default?.nodeMetadata || {
                 category: 'Other',
                 icon: 'BoxIcon',
@@ -1164,7 +1140,6 @@ onMounted(async () => {
             });
         }
 
-        // Auto-expand all categories initially
         const categories = [...new Set(nodeTypes.map(node => node.category))];
         categories.forEach(category => {
             expandedCategories[category] = true;
@@ -1200,7 +1175,7 @@ onBeforeUnmount(() => {
     color: white !important;
     min-width: 180px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-    transform: translateZ(0) !important; /* Enable hardware acceleration */
+    transform: translateZ(0) !important;
 }
 
 .vue-flow__node:hover {
@@ -1209,7 +1184,6 @@ onBeforeUnmount(() => {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.3) !important;
 }
 
-/* Enhanced selection visibility */
 .vue-flow__node.selected {
     border-color: #3b82f6 !important;
     background: linear-gradient(145deg, #1e3a8a, #1d4ed8) !important;
@@ -1221,7 +1195,6 @@ onBeforeUnmount(() => {
     z-index: 100 !important;
 }
 
-/* Multiple selection styling */
 .vue-flow__node.selected:not(:only-child) {
     border-color: #8b5cf6 !important;
     background: linear-gradient(145deg, #5b21b6, #7c3aed) !important;
@@ -1231,7 +1204,6 @@ onBeforeUnmount(() => {
         0 8px 24px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Dragging state for better feedback */
 .vue-flow__node.dragging {
     transform: rotate(2deg) scale(1.05) translateZ(0) !important;
     box-shadow:
@@ -1240,7 +1212,7 @@ onBeforeUnmount(() => {
     z-index: 1000 !important;
 }
 
-/* Simulation states (keeping original functionality) */
+/* Simulation states */
 .simulation-mode .vue-flow__node {
     opacity: 0.5 !important;
 }
@@ -1280,6 +1252,30 @@ onBeforeUnmount(() => {
     box-shadow: 0 0 20px rgba(245, 101, 101, 0.7) !important;
 }
 
+@keyframes nodeGlow {
+    0%, 100% {
+        box-shadow:
+            0 0 0 4px rgba(66, 153, 225, 0.2),
+            0 0 20px rgba(66, 153, 225, 0.4),
+            0 0 40px rgba(66, 153, 225, 0.2);
+    }
+    50% {
+        box-shadow:
+            0 0 0 6px rgba(66, 153, 225, 0.3),
+            0 0 30px rgba(66, 153, 225, 0.6),
+            0 0 60px rgba(66, 153, 225, 0.3);
+    }
+}
+
+@keyframes nodeProcessing {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
 /* Enhanced selection box */
 .vue-flow__selection {
     background: rgba(59, 130, 246, 0.15) !important;
@@ -1288,7 +1284,7 @@ onBeforeUnmount(() => {
     backdrop-filter: blur(4px) !important;
 }
 
-/* Enhanced edge styling with better selection visibility */
+/* Enhanced edge styling */
 .vue-flow__edge-path {
     stroke: #6366f1 !important;
     stroke-width: 2px !important;
@@ -1321,7 +1317,7 @@ onBeforeUnmount(() => {
     }
 }
 
-/* Enhanced handle styling with better hover feedback */
+/* Enhanced handle styling */
 .vue-flow__handle {
     width: 14px !important;
     height: 14px !important;
