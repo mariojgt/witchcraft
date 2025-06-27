@@ -18,6 +18,11 @@ return new class extends Migration
             $table->longText('nodes'); // Using longText for larger JSON data
             $table->longText('edges'); // Using longText for larger JSON data
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_deletable')->default(true);
+            $table->integer('version')->default(1);
+            $table->unsignedBigInteger('parent_diagram_id')->nullable();
+            $table->boolean('is_latest_version')->default(true);
+            $table->text('version_notes')->nullable();
             $table->timestamps();
         });
     }

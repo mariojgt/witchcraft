@@ -166,6 +166,26 @@
                     <div class="w-px h-6 bg-gray-700 mx-1"></div>
 
                     <button
+                        @click="showVersionHistory = true"
+                        :disabled="!currentDiagramId"
+                        class="p-2 rounded-lg hover:bg-[#1a1a1a] text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Version History"
+                    >
+                        <HistoryIcon class="w-4 h-4" />
+                    </button>
+
+                    <button
+                        @click="showSimulationHistory = true"
+                        :disabled="!currentDiagramId"
+                        class="p-2 rounded-lg hover:bg-[#1a1a1a] text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Simulation History"
+                    >
+                        <ClockIcon class="w-4 h-4" />
+                    </button>
+
+                    <div class="w-px h-6 bg-gray-700 mx-1"></div>
+
+                    <button
                         @click="selectAllNodes"
                         class="p-2 rounded-lg hover:bg-[#1a1a1a] text-gray-400 hover:text-white transition-colors"
                         title="Select All (⌘A)"
@@ -230,7 +250,7 @@
                     <span v-if="currentDiagramData.name" class="text-blue-400">{{ currentDiagramData.name }}</span>
                 </div>
 
-                <!-- Right Actions -->
+                <!-- Right Actions with Enhanced Simulation Controls -->
                 <div class="flex items-center gap-2">
                     <button
                         @click="showSidebar = !showSidebar"
@@ -240,14 +260,49 @@
                         Files
                     </button>
 
-                    <button
-                        @click="startSimulation"
-                        :disabled="nodes.length === 0"
-                        class="px-4 py-1.5 text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                    >
-                        <PlayIcon class="w-4 h-4 inline mr-1" />
-                        Run
-                    </button>
+                    <!-- Enhanced Simulation Controls -->
+                    <div class="flex items-center gap-1">
+                        <!-- Run Button (show only when not running) -->
+                        <button
+                            v-if="!pauseState.isRunning"
+                            @click="startSimulation"
+                            :disabled="nodes.length === 0"
+                            class="px-4 py-1.5 text-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                            <PlayIcon class="w-4 h-4 inline mr-1" />
+                            Run
+                        </button>
+
+                        <!-- Pause Button (show when running and not paused) -->
+                        <button
+                            v-if="pauseState.isRunning && !pauseState.isPaused"
+                            @click="pauseSimulation"
+                            class="px-4 py-1.5 text-sm bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white rounded-lg transition-all font-medium"
+                        >
+                            <PauseIcon class="w-4 h-4 inline mr-1" />
+                            Pause
+                        </button>
+
+                        <!-- Resume Button (show when paused) -->
+                        <button
+                            v-if="pauseState.isRunning && pauseState.isPaused"
+                            @click="resumeSimulation"
+                            class="px-4 py-1.5 text-sm bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white rounded-lg transition-all font-medium"
+                        >
+                            <PlayIcon class="w-4 h-4 inline mr-1" />
+                            Resume
+                        </button>
+
+                        <!-- Stop Button (show when running) -->
+                        <button
+                            v-if="pauseState.isRunning"
+                            @click="stopSimulation"
+                            class="px-3 py-1.5 text-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-lg transition-all font-medium"
+                        >
+                            <OctagonMinus class="w-4 h-4 inline mr-1" />
+                            Stop
+                        </button>
+                    </div>
 
                     <div class="relative">
                         <button
@@ -342,33 +397,161 @@
                     </template>
                 </VueFlow>
 
-                <!-- Simulation Progress -->
-                <div v-if="simulationState.isRunning"
-                     class="fixed bottom-4 right-4 bg-[#111] border border-gray-700 p-4 rounded-lg shadow-xl text-white z-50 min-w-[280px]">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <h3 class="text-sm font-semibold">Simulation Running</h3>
-                    </div>
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Current Node:</span>
-                            <span class="text-blue-400 font-medium">{{ simulationState.currentNodeId || 'None' }}</span>
+                <!-- Enhanced Simulation Progress/Results with Pause Status -->
+                <div v-if="simulationState.isRunning || simulationState.lastResult || pauseState.isRunning"
+                     class="fixed bottom-4 right-4 bg-[#111] border border-gray-700 p-4 rounded-lg shadow-xl text-white z-50 min-w-[280px] max-w-[400px]">
+
+                    <!-- Running State -->
+                    <div v-if="pauseState.isRunning" class="flex items-center gap-2 mb-3">
+                        <!-- Paused State -->
+                        <div v-if="pauseState.isPaused" class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                            <h3 class="text-sm font-semibold text-yellow-300">Simulation Paused</h3>
                         </div>
-                        <div class="flex justify-between">
+                        <!-- Running State -->
+                        <div v-else class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            <h3 class="text-sm font-semibold">Simulation Running</h3>
+                        </div>
+                        <button @click="toggleSimulationDetails" class="ml-auto text-gray-400 hover:text-white">
+                            <ChevronDownIcon :class="`w-4 h-4 transition-transform ${showSimulationDetails ? 'rotate-180' : ''}`" />
+                        </button>
+                    </div>
+
+                    <!-- Completed State -->
+                    <div v-else-if="simulationState.lastResult" class="flex items-center gap-2 mb-3">
+                        <div class="w-2 h-2 rounded-full"
+                             :class="{
+                                 'bg-green-500': simulationState.lastResult.success,
+                                 'bg-red-500': !simulationState.lastResult.success
+                             }"></div>
+                        <h3 class="text-sm font-semibold">
+                            Simulation {{ simulationState.lastResult.success ? 'Completed' : 'Failed' }}
+                        </h3>
+                        <div class="ml-auto flex items-center gap-1">
+                            <button @click="toggleSimulationDetails" class="text-gray-400 hover:text-white">
+                                <ChevronDownIcon :class="`w-4 h-4 transition-transform ${showSimulationDetails ? 'rotate-180' : ''}`" />
+                            </button>
+                            <button @click="clearSimulationResults" class="text-gray-400 hover:text-white">
+                                <XIcon class="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Current Node Info (Running or Paused) -->
+                    <div v-if="pauseState.isRunning && currentNodeInfo" class="mb-3 p-2 border rounded"
+                         :class="{
+                             'bg-yellow-900/20 border-yellow-700/30': pauseState.isPaused,
+                             'bg-blue-900/20 border-blue-700/30': !pauseState.isPaused
+                         }">
+                        <div class="flex items-center gap-2 mb-1">
+                            <component :is="getNodeIcon(currentNodeInfo.type)" class="w-4 h-4"
+                                       :class="{
+                                           'text-yellow-400': pauseState.isPaused,
+                                           'text-blue-400': !pauseState.isPaused
+                                       }" />
+                            <span class="text-sm font-medium"
+                                  :class="{
+                                      'text-yellow-300': pauseState.isPaused,
+                                      'text-blue-300': !pauseState.isPaused
+                                  }">{{ currentNodeInfo.title || currentNodeInfo.type }}</span>
+                        </div>
+                        <div class="text-xs text-gray-300">
+                            {{ pauseState.isPaused ? 'Paused at: ' : '' }}{{ currentNodeInfo.description || 'Processing...' }}
+                        </div>
+                        <!-- currentNodeInfo add the for each loop check if a option and create a json scruter -->
+                        <div v-if="simulationState.variables" class="mt-2 text-xs text-gray-400">
+                            <pre class="bg-gray-800 p-2 rounded">{{ JSON.stringify(simulationState.variables, null, 2) }}</pre>
+                        </div>
+
+                    </div>
+
+                    <!-- Completion Summary (Completed) -->
+                    <div v-else-if="simulationState.lastResult" class="mb-3 p-2 rounded"
+                         :class="{
+                             'bg-green-900/20 border border-green-700/30': simulationState.lastResult.success,
+                             'bg-red-900/20 border border-red-700/30': !simulationState.lastResult.success
+                         }">
+                        <div class="flex items-center gap-2 mb-1">
+                            <CheckCircleIcon v-if="simulationState.lastResult.success" class="w-4 h-4 text-green-400" />
+                            <XCircleIcon v-else class="w-4 h-4 text-red-400" />
+                            <span class="text-sm font-medium"
+                                  :class="{
+                                      'text-green-300': simulationState.lastResult.success,
+                                      'text-red-300': !simulationState.lastResult.success
+                                  }">
+                                {{ simulationState.lastResult.summary }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-300">
+                            Duration: {{ simulationState.lastResult.duration }}ms |
+                            {{ simulationState.lastResult.completedNodes }}/{{ simulationState.lastResult.totalNodes }} nodes
+                        </div>
+                    </div>
+
+                    <!-- Progress Info -->
+                    <div class="space-y-2 text-sm">
+                        <div v-if="pauseState.isRunning" class="flex justify-between">
                             <span class="text-gray-400">Progress:</span>
                             <span class="text-green-400 font-medium">{{ completedCount }} / {{ nodes.length }}</span>
                         </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
+
+                        <div v-if="pauseState.isRunning" class="w-full bg-gray-700 rounded-full h-2">
                             <div class="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
                                  :style="{ width: `${progressPercentage}%` }"></div>
                         </div>
-                        <div v-if="Object.keys(simulationState.variables).length > 0" class="mt-3">
-                            <h4 class="text-xs font-semibold text-gray-300 mb-1">Variables:</h4>
-                            <div class="space-y-1 max-h-24 overflow-y-auto">
-                                <div v-for="(value, key) in simulationState.variables" :key="key"
-                                     class="bg-gray-800 px-2 py-1 rounded text-xs">
-                                    <span class="text-yellow-400">{{ key }}:</span>
-                                    <span class="text-gray-200">{{ formatValue(value) }}</span>
+
+                        <!-- Final Results Summary -->
+                        <div v-else-if="simulationState.lastResult && showSimulationDetails" class="space-y-2">
+                            <div class="text-xs text-gray-400">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>Success: {{ simulationState.lastResult.nodeResults.success || 0 }}</div>
+                                    <div>Failed: {{ simulationState.lastResult.nodeResults.failed || 0 }}</div>
+                                    <div>Variables: {{ Object.keys(simulationState.lastResult.finalVariables || {}).length }}</div>
+                                    <div>Outputs: {{ Object.keys(simulationState.lastResult.outputs || {}).length }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed View -->
+                        <div v-if="showSimulationDetails" class="mt-3 space-y-2">
+                            <!-- Final Variables (Completed) or Current Variables (Running) -->
+                            <div v-if="(pauseState.isRunning && Object.keys(simulationState.variables).length > 0) ||
+                                      (!pauseState.isRunning && simulationState.lastResult?.finalVariables)">
+                                <h4 class="text-xs font-semibold text-gray-300 mb-1">
+                                    {{ pauseState.isRunning ? 'Recent Activity:' : 'Execution Log:' }}
+                                </h4>
+                                <div class="space-y-1 max-h-32 overflow-y-auto">
+                                    <div v-for="log in (pauseState.isRunning ? recentLogs : simulationState.lastResult?.logs?.slice(-8) || [])"
+                                         :key="log.id || log.timestamp"
+                                         class="text-xs p-1 rounded"
+                                         :class="{
+                                             'text-green-300': log.type === 'success',
+                                             'text-red-300': log.type === 'error',
+                                             'text-yellow-300': log.type === 'warning',
+                                             'text-blue-300': log.type === 'info',
+                                             'text-gray-300': log.type === 'default'
+                                         }">
+                                        {{ log.message }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Node Status Summary (Running) -->
+                            <div v-if="pauseState.isRunning && nodeStatusSummary">
+                                <h4 class="text-xs font-semibold text-gray-300 mb-1">Node Status:</h4>
+                                <div class="grid grid-cols-3 gap-1 text-xs">
+                                    <div class="text-green-400">✓ {{ nodeStatusSummary.completed }}</div>
+                                    <div class="text-blue-400">⏳ {{ nodeStatusSummary.processing }}</div>
+                                    <div class="text-red-400">✗ {{ nodeStatusSummary.error }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Error Details (Failed) -->
+                            <div v-if="!pauseState.isRunning && simulationState.lastResult && !simulationState.lastResult.success">
+                                <h4 class="text-xs font-semibold text-red-300 mb-1">Error Details:</h4>
+                                <div class="text-xs text-red-300 bg-red-900/20 p-2 rounded">
+                                    {{ simulationState.lastResult.error || 'Unknown error occurred' }}
                                 </div>
                             </div>
                         </div>
@@ -393,14 +576,32 @@
             :show="showSaveDialog"
             :initial-data="currentDiagramData"
             :is-update="!!currentDiagramId"
+            :has-changes="hasUnsavedChanges"
+            :current-version="currentDiagramData.version || 1"
+            :available-icons="availableIcons"
             @close="showSaveDialog = false"
             @save="saveDiagram"
+        />
+
+        <!-- Version History Modal -->
+        <VersionHistory
+            :show="showVersionHistory"
+            :flow-diagram-id="currentDiagramId"
+            @close="showVersionHistory = false"
+            @version-restored="handleVersionRestored"
+        />
+
+        <!-- Simulation History Modal -->
+        <SimulationHistory
+            :show="showSimulationHistory"
+            :flow-diagram-id="currentDiagramId"
+            @close="showSimulationHistory = false"
         />
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, onMounted, computed, markRaw, nextTick, onBeforeUnmount, watch } from 'vue';
 import { VueFlow, useVueFlow } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
 import * as LucideIcons from 'lucide-vue-next';
@@ -408,13 +609,17 @@ import {
     XIcon, PlusIcon, EditIcon, TrashIcon, SearchIcon, ChevronDownIcon,
     PlayIcon, DownloadIcon, UploadIcon, ListIcon, SaveIcon, FolderIcon,
     UndoIcon, RedoIcon, TextSelect, CopyIcon, ClipboardIcon, BoxIcon,
-    GridIcon
+    GridIcon, HistoryIcon, ClockIcon, DatabaseIcon, GitBranchIcon,
+    GlobeIcon, CpuIcon, BellIcon, FilterIcon, CheckCircleIcon, XCircleIcon,
+    PauseIcon, OctagonMinus
 } from 'lucide-vue-next';
 import DiagramService from './services/DiagramService';
 import SimulationService from './services/SimulationService';
 import SimulationLogs from './SimulationLogs.vue';
 import FileManagementModal from './FileManagementModal.vue';
 import EnhancedSaveDialog from './EnhancedSaveDialog.vue';
+import VersionHistory from './VersionHistory.vue';
+import SimulationHistory from './SimulationHistory.vue';
 
 // Core state
 const nodes = ref([]);
@@ -429,16 +634,32 @@ const { addEdges, removeNodes, addNodes, removeEdges, project, fitView, toObject
 const showSaveDialog = ref(false);
 const showSidebar = ref(false);
 const showExportMenu = ref(false);
+const showVersionHistory = ref(false);
+const showSimulationHistory = ref(false);
 const savedDiagrams = ref([]);
 const currentDiagramId = ref(null);
 const currentDiagramData = ref({});
 const searchQuery = ref('');
 const searchInput = ref(null);
+const availableIcons = ref({});
+const hasUnsavedChanges = ref(false);
 
 // Enhanced features state
 const clipboard = ref([]);
 const history = reactive({ past: [], future: [] });
 const loadingDiagrams = ref(false);
+
+// Track changes for versioning
+function markAsChanged() {
+    hasUnsavedChanges.value = true;
+}
+
+// Watch for changes to nodes and edges
+watch([nodes, edges], () => {
+    if (currentDiagramId.value) {
+        markAsChanged();
+    }
+}, { deep: true });
 
 // Node library state
 const nodeTypes = reactive([]);
@@ -449,12 +670,58 @@ const showLogs = ref(true);
 const simulationSpeed = ref(1000);
 const simulationLogs = ref([]);
 const nodeOutputs = reactive({});
+const showSimulationDetails = ref(false);
+
+// Payload display state
+const expandedNodePayloads = ref({});
+const expandedRawPayloads = ref({});
+const nodePayloads = reactive({});
 
 const simulationState = reactive({
     isRunning: false,
     currentNodeId: null,
     nodeStatuses: {},
-    variables: {}
+    variables: {},
+    lastResult: null
+});
+
+// Pause state
+const pauseState = reactive({
+    isPaused: false,
+    isRunning: false
+});
+
+// Computed properties for simulation
+const currentNodeInfo = computed(() => {
+    if (!simulationState.currentNodeId) return null;
+
+    const node = nodes.value.find(n => n.id === simulationState.currentNodeId);
+    if (!node) return null;
+
+    return {
+        id: node.id,
+        type: node.type,
+        title: node.data?.customTitle || node.data?.label,
+        description: node.data?.customDescription || getNodeDescription(node.type),
+        data: node.data,
+        lastPayload: nodePayloads[node.id]
+    };
+});
+
+const recentLogs = computed(() => {
+    return simulationLogs.value.slice(-5).reverse().map((log, index) => ({
+        ...log,
+        id: Date.now() + index
+    }));
+});
+
+const nodeStatusSummary = computed(() => {
+    const statuses = Object.values(simulationState.nodeStatuses);
+    return {
+        completed: statuses.filter(s => s === 'completed').length,
+        processing: statuses.filter(s => s === 'processing').length,
+        error: statuses.filter(s => s === 'error').length
+    };
 });
 
 // Initialize Services
@@ -466,7 +733,6 @@ simulationService.onNodeStatusChange = (statuses, currentNodeId) => {
     simulationState.nodeStatuses = { ...statuses };
     simulationState.currentNodeId = currentNodeId;
 
-    // Force Vue to update the node classes
     nodes.value = nodes.value.map(node => ({
         ...node,
         class: getNodeClass({ id: node.id })
@@ -483,6 +749,18 @@ simulationService.onLogAdded = (message, type) => {
 
 simulationService.onVariablesChange = (variables) => {
     simulationState.variables = { ...variables };
+};
+
+// Setup pause service callback
+simulationService.onPauseStateChange = (isPaused, isRunning) => {
+    pauseState.isPaused = isPaused;
+    pauseState.isRunning = isRunning;
+};
+
+// Add callback for capturing node payload data
+simulationService.onNodePayload = (nodeId, payload) => {
+    nodePayloads[nodeId] = payload;
+    console.log('Node payload captured:', { nodeId, payload });
 };
 
 // Computed properties
@@ -521,6 +799,86 @@ function formatValue(value) {
         return JSON.stringify(value, null, 2).substring(0, 50) + '...';
     }
     return String(value).substring(0, 50);
+}
+
+// Payload display helper functions
+function formatPayloadData(data) {
+    if (!data) return 'No data';
+
+    if (typeof data === 'object') {
+        return JSON.stringify(data, null, 2);
+    }
+    return String(data);
+}
+
+function toggleNodePayload(nodeId) {
+    expandedNodePayloads.value[nodeId] = !expandedNodePayloads.value[nodeId];
+}
+
+function toggleRawPayload(nodeId) {
+    expandedRawPayloads.value[nodeId] = !expandedRawPayloads.value[nodeId];
+}
+
+function copyPayloadToClipboard(payload) {
+    if (!payload) return;
+
+    try {
+        const jsonString = JSON.stringify(payload, null, 2);
+        navigator.clipboard.writeText(jsonString).then(() => {
+            // You could add a toast notification here
+            console.log('Payload copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy payload:', err);
+            // Fallback method
+            const textArea = document.createElement('textarea');
+            textArea.value = jsonString;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        });
+    } catch (error) {
+        console.error('Error copying payload:', error);
+    }
+}
+
+function copyVariablesToClipboard(variables) {
+    if (!variables) return;
+
+    try {
+        const jsonString = JSON.stringify(variables, null, 2);
+        navigator.clipboard.writeText(jsonString).then(() => {
+            console.log('Variables copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy variables:', err);
+            // Fallback method
+            const textArea = document.createElement('textarea');
+            textArea.value = jsonString;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        });
+    } catch (error) {
+        console.error('Error copying variables:', error);
+    }
+}
+
+function formatVariableValue(value) {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'boolean') return value.toString();
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'string') {
+        // Truncate long strings but show full content for short ones
+        return value.length > 100 ? value.substring(0, 100) + '...' : value;
+    }
+    if (typeof value === 'object') {
+        // For objects/arrays, show a compact representation
+        const jsonStr = JSON.stringify(value);
+        return jsonStr.length > 100 ? jsonStr.substring(0, 100) + '...' : jsonStr;
+    }
+    return String(value);
 }
 
 // History management
@@ -563,7 +921,6 @@ function onSelectionChange({ nodes: selectedNodeItems, edges: selectedEdgeItems 
     selectedNodes.value = selectedNodeItems || [];
     selectedEdges.value = selectedEdgeItems || [];
 
-    // Also update the nodes array to reflect selection state
     nodes.value = nodes.value.map(node => ({
         ...node,
         selected: selectedNodeItems.some(selectedNode => selectedNode.id === node.id)
@@ -693,7 +1050,6 @@ function addNodeToCenter(nodeType) {
     selectedNodes.value = [newNode];
 }
 
-// Enhanced drop with smooth positioning
 function onDrop(event) {
     event.preventDefault();
     const nodeTypeData = event.dataTransfer.getData('application/nodeType');
@@ -803,7 +1159,47 @@ function toggleLogs() {
 
 function toggleSnapToGrid() {
     snapToGrid.value = !snapToGrid.value;
-    console.log(`Snap to grid ${snapToGrid.value ? 'enabled' : 'disabled'}`);
+}
+
+function toggleSimulationDetails() {
+    showSimulationDetails.value = !showSimulationDetails.value;
+}
+
+function clearSimulationResults() {
+    simulationState.lastResult = null;
+    showSimulationDetails.value = false;
+}
+
+function getNodeIcon(nodeType) {
+    const iconMap = {
+        'model-lookup': DatabaseIcon,
+        'condition': FilterIcon,
+        'api-request': GlobeIcon,
+        'artisan-command': CpuIcon,
+        'notification': BellIcon,
+        'variable': EditIcon,
+        'json-extract': GitBranchIcon,
+        'trigger': PlayIcon,
+        'default': BoxIcon
+    };
+
+    return iconMap[nodeType] || iconMap.default;
+}
+
+function getNodeDescription(nodeType) {
+    const descriptions = {
+        'model-lookup': 'Fetching record from database',
+        'condition': 'Evaluating condition logic',
+        'api-request': 'Making HTTP request',
+        'artisan-command': 'Executing Laravel command',
+        'notification': 'Sending notification',
+        'variable': 'Setting variable value',
+        'json-extract': 'Extracting JSON data',
+        'trigger': 'Triggering workflow',
+        'default': 'Processing node'
+    };
+
+    return descriptions[nodeType] || descriptions.default;
 }
 
 function clearLogs() {
@@ -815,29 +1211,45 @@ function changeSimulationSpeed(newSpeed) {
     simulationService.setSimulationSpeed(simulationSpeed.value);
 }
 
-async function startSimulation() {
-    try {
-        simulationLogs.value = [];
-        resetSimulationState();
-        simulationState.isRunning = true;
-        simulationService.setSimulationSpeed(simulationSpeed.value);
+// Pause control functions
+function pauseSimulation() {
+    simulationService.pause();
+}
 
-        const workflowData = toObject();
-        await simulationService.processFlow(workflowData.nodes, workflowData.edges);
-    } catch (error) {
-        console.error('Simulation failed:', error);
-    } finally {
-        setTimeout(() => {
-            resetSimulationState();
-        }, 1000);
-    }
+function resumeSimulation() {
+    simulationService.resume();
+}
+
+function stopSimulation() {
+    simulationService.stop();
 }
 
 function resetSimulationState() {
+    const lastResult = {
+        success: Object.values(simulationState.nodeStatuses).every(s => s === 'completed'),
+        summary: `Processed ${completedCount.value}/${nodes.value.length} nodes`,
+        duration: Date.now() - (simulationState.startTime || Date.now()),
+        completedNodes: completedCount.value,
+        totalNodes: nodes.value.length,
+        finalVariables: { ...simulationState.variables },
+        logs: [...simulationLogs.value],
+        nodeResults: {
+            success: Object.values(simulationState.nodeStatuses).filter(s => s === 'completed').length,
+            failed: Object.values(simulationState.nodeStatuses).filter(s => s === 'error').length
+        },
+        outputs: { ...nodeOutputs },
+        error: null
+    };
+
+    simulationState.lastResult = lastResult;
     simulationState.isRunning = false;
     simulationState.currentNodeId = null;
     simulationState.nodeStatuses = {};
-    simulationState.variables = {};
+
+    // Clear payload data
+    Object.keys(nodePayloads).forEach(key => delete nodePayloads[key]);
+    expandedNodePayloads.value = {};
+    expandedRawPayloads.value = {};
 
     nodes.value = nodes.value.map(node => ({
         ...node,
@@ -857,6 +1269,7 @@ function createNewWorkflow() {
     selectedEdges.value = [];
     currentDiagramId.value = null;
     currentDiagramData.value = {};
+    hasUnsavedChanges.value = false;
     showSidebar.value = false;
 
     history.past = [];
@@ -869,6 +1282,11 @@ async function loadSavedDiagrams() {
     try {
         loadingDiagrams.value = true;
         savedDiagrams.value = await DiagramService.fetchAll();
+
+        const iconsResponse = await fetch('/api/witchcraft/available-icons');
+        if (iconsResponse.ok) {
+            availableIcons.value = await iconsResponse.json();
+        }
     } catch (error) {
         console.error('Failed to load diagrams:', error);
         alert('Failed to load saved diagrams');
@@ -890,9 +1308,12 @@ async function loadDiagram(diagram) {
             description: diagram.description || '',
             category: diagram.category || 'General',
             icon: diagram.icon || 'WorkflowIcon',
-            trigger_code: diagram.trigger_code || ''
+            trigger_code: diagram.trigger_code || '',
+            is_deletable: diagram.is_deletable !== undefined ? diagram.is_deletable : true,
+            version: diagram.version || 1
         };
         showSidebar.value = false;
+        hasUnsavedChanges.value = false;
 
         history.past = [];
         history.future = [];
@@ -926,18 +1347,17 @@ async function deleteDiagram(diagram) {
 }
 
 function openSaveDialog() {
-    // Set current diagram data for the save dialog
     if (currentDiagramId.value && currentDiagramData.value.name) {
-        // Updating existing diagram
         showSaveDialog.value = true;
     } else {
-        // Creating new diagram
         currentDiagramData.value = {
             name: '',
             description: '',
             category: 'General',
             icon: 'WorkflowIcon',
-            trigger_code: ''
+            trigger_code: '',
+            is_deletable: true,
+            version: 1
         };
         showSaveDialog.value = true;
     }
@@ -951,12 +1371,15 @@ async function saveDiagram(formData) {
             category: formData.category,
             icon: formData.icon,
             trigger_code: formData.trigger_code,
+            is_deletable: formData.is_deletable,
+            version_notes: formData.version_notes,
             nodes: nodes.value,
             edges: edges.value
         };
 
         if (currentDiagramId.value) {
-            await DiagramService.update(currentDiagramId.value, diagramData);
+            const updatedDiagram = await DiagramService.update(currentDiagramId.value, diagramData);
+            currentDiagramId.value = updatedDiagram.id;
             alert('Workflow updated successfully!');
         } else {
             const newDiagram = await DiagramService.store(diagramData);
@@ -964,14 +1387,95 @@ async function saveDiagram(formData) {
             alert('Workflow saved successfully!');
         }
 
-        // Update current diagram data
-        currentDiagramData.value = { ...formData };
+        currentDiagramData.value = { ...formData, version: formData.version || 1 };
+        hasUnsavedChanges.value = false;
 
         await loadSavedDiagrams();
         showSaveDialog.value = false;
     } catch (error) {
         console.error('Failed to save diagram:', error);
         alert(`Failed to ${currentDiagramId.value ? 'update' : 'save'} diagram`);
+    }
+}
+
+async function handleVersionRestored(versionData) {
+    try {
+        nodes.value = versionData.nodes || [];
+        edges.value = versionData.edges || [];
+        selectedNodes.value = [];
+        selectedEdges.value = [];
+
+        currentDiagramData.value = {
+            ...currentDiagramData.value,
+            name: versionData.name,
+            description: versionData.description,
+            category: versionData.category || 'General',
+            icon: versionData.icon || 'WorkflowIcon',
+            is_deletable: versionData.is_deletable !== undefined ? versionData.is_deletable : true
+        };
+
+        hasUnsavedChanges.value = true;
+
+        history.past = [];
+        history.future = [];
+
+        nextTick(() => {
+            fitView({ duration: 800, padding: 0.2 });
+        });
+
+        const versionInfo = versionData.version_info;
+        alert(`Version ${versionInfo.restored_from_version} loaded into editor. Make your changes and save to create a new version.`);
+
+        console.log('Version data loaded for editing');
+    } catch (error) {
+        console.error('Failed to load version data:', error);
+        alert('Failed to load version data');
+    }
+}
+
+// Enhanced simulation with history tracking and pause support
+async function startSimulation() {
+    try {
+        simulationState.lastResult = null;
+        simulationLogs.value = [];
+        resetSimulationState();
+
+        simulationState.isRunning = true;
+        simulationState.startTime = Date.now();
+        simulationService.setSimulationSpeed(simulationSpeed.value);
+
+        const startTime = Date.now();
+        const workflowData = toObject();
+
+        await simulationService.processFlow(workflowData.nodes, workflowData.edges);
+
+        if (currentDiagramId.value && simulationService.isRunning) {
+            const endTime = Date.now();
+            const runData = {
+                execution_log: simulationLogs.value,
+                final_variables: simulationState.variables,
+                status: 'success',
+                total_nodes: workflowData.nodes.length,
+                completed_nodes: completedCount.value,
+                started_at: new Date().toISOString(),
+                completed_at: new Date(endTime).toISOString(),
+                duration_ms: 0
+            };
+
+            await fetch(`/api/witchcraft/diagrams/${currentDiagramId.value}/simulation-runs`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify(runData)
+            });
+        }
+    } finally {
+        setTimeout(() => {
+            resetSimulationState();
+        }, 1000);
     }
 }
 
@@ -1102,6 +1606,32 @@ function handleKeyDown(event) {
             if (isCmd) {
                 event.preventDefault();
                 redo();
+            }
+            break;
+
+        case 'k':
+            if (isCmd) {
+                event.preventDefault();
+                if (searchInput.value) {
+                    searchInput.value.focus();
+                }
+            }
+            break;
+
+        case ' ':
+            if (pauseState.isRunning && !pauseState.isPaused) {
+                event.preventDefault();
+                pauseSimulation();
+            } else if (pauseState.isRunning && pauseState.isPaused) {
+                event.preventDefault();
+                resumeSimulation();
+            }
+            break;
+
+        case 'escape':
+            if (pauseState.isRunning) {
+                event.preventDefault();
+                stopSimulation();
             }
             break;
     }

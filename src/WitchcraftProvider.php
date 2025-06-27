@@ -43,6 +43,20 @@ class WitchcraftProvider extends ServiceProvider
     public function register()
     {
         $this->publish();
+        // Load helper functions
+        $this->loadHelpers();
+    }
+
+    /**
+     * Load helper functions
+     */
+    protected function loadHelpers(): void
+    {
+        $helpersPath = __DIR__.'/../helpers/witchcraft_helpers.php';
+
+        if (file_exists($helpersPath)) {
+            require_once $helpersPath;
+        }
     }
 
     public function publish()

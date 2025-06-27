@@ -14,7 +14,8 @@ class NotificationHandler extends BaseNodeHandler
         \Log::info("Notification: {$processedMessage}");
 
         return $this->success([
-            'message' => $processedMessage
+            'message' => $processedMessage,
+            'extractedValue' => $processedMessage, // Assuming you want to return the processed message as an extracted value
         ], "Notification sent: {$processedMessage}");
     }
 }

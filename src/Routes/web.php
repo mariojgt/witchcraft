@@ -23,6 +23,15 @@ Route::middleware(config('witchcraft.editor_middlewares', ['web']))
         Route::get('diagrams-for-selection', [FlowDiagramController::class, 'forSelection']);
         Route::get('flow-statistics', [FlowDiagramController::class, 'statistics']);
         Route::get('categories', [FlowDiagramController::class, 'categories']);
+        Route::get('available-icons', [FlowDiagramController::class, 'availableIcons']);
+
+        // Version management
+        Route::get('diagrams/{diagram}/versions', [FlowDiagramController::class, 'versions']);
+        Route::post('diagrams/{diagram}/restore', [FlowDiagramController::class, 'restore']);
+
+        // Simulation history
+        Route::get('diagrams/{diagram}/simulation-runs', [FlowDiagramController::class, 'simulationRuns']);
+        Route::post('diagrams/{diagram}/simulation-runs', [FlowDiagramController::class, 'storeSimulationRun']);
 
         // Flow execution endpoints
         Route::post('diagrams/{diagram}/execute', [FlowDiagramController::class, 'execute']);

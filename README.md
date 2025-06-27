@@ -1,46 +1,193 @@
-# Witchcraft: Laravel Workflow Automation Package
+# Witchcraft: Laravel Workflow Automation
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/mariojgt/witchcraft/refs/heads/main/art/showcase.png" width="800" alt="Witchcraft Showcase">
 </p>
 
-## Overview
-Witchcraft is a powerful Laravel package that provides a visual workflow automation system, allowing developers and non-technical users to create complex workflows using a node-based interface.
+> Create powerful workflows with a visual drag-and-drop editor. Perfect for automating business processes, data processing, and API integrations.
 
-[![alt text](https://img.youtube.com/vi/HiZdWxRaxxQ/0.jpg)](https://www.youtube.com/watch?v=HiZdWxRaxxQ)
+[![Watch Demo](https://img.youtube.com/vi/HiZdWxRaxxQ/0.jpg)](https://www.youtube.com/watch?v=HiZdWxRaxxQ)
 
-## Features
-- 🔧 Visual Workflow Editor
-- 🚀 Multiple Node Types
-- 🔗 Flexible Condition Handling
-- 🌐 Model Event Triggers
-- 🤖 Artisan Command Execution
-- 📡 API Integration
+## ✨ Features
 
-## Installation
+- 🎨 **Visual Workflow Editor** - Drag, drop, and connect nodes
+- 🔄 **Version Control** - Automatic versioning with rollback support
+- 🛡️ **Protected Workflows** - Mark workflows as non-deletable
+- 📊 **Simulation History** - Track all workflow executions
+- 🔗 **Easy Integration** - Simple helper functions for triggering workflows
+- 🎯 **Smart Triggers** - Execute workflows programmatically with unique codes
 
-Install the package via Composer:
+## 🚀 Quick Start
+
+### Install
 ```bash
 composer require mariojgt/witchcraft
 ```
 
-### Publish Configuration (Optional)
+### Setup
 ```bash
-php artisan vendor:publish --provider="Mariojgt\Witchcraft\WitchcraftServiceProvider"
+php artisan migrate
 ```
 
-### Vite Configuration
-Add the following configuration to your `vite.config.js`:
+### Use
+```php
+// Execute any workflow with one line
+$result = witchcraft_trigger('FLOW_MY_WORKFLOW', ['data' => 'value']);
+```
 
+## 📝 Simple Usage Examples
+
+### Basic Workflow Execution
+```php
+// Simple trigger
+$result = witchcraft_trigger('FLOW_PROCESS_ORDER', [
+    'order_id' => 123,
+    'user_id' => 456
+]);
+
+// Safe trigger with error handling
+$response = witchcraft_safe_trigger('FLOW_SEND_EMAIL', ['email' => 'user@example.com']);
+if ($response['success']) {
+    echo "Email sent successfully!";
+} else {
+    echo "Error: " . $response['error'];
+}
+```
+
+### Check if Workflow Exists
+```php
+if (witchcraft_exists('FLOW_BACKUP_DATA')) {
+    $result = witchcraft_trigger('FLOW_BACKUP_DATA');
+}
+```
+
+### Get Workflow Information
+```php
+$info = witchcraft_info('FLOW_GENERATE_REPORT');
+echo "Workflow: {$info['name']} (Version {$info['version']})";
+```
+
+## 🎯 Built-in Node Types
+
+| Node Type | Purpose | Example Use |
+|-----------|---------|-------------|
+| **Model Select** | Database triggers | Run workflow when user is created |
+| **Condition** | Decision logic | If status = "active" then... |
+| **API Request** | External calls | Send data to third-party service |
+| **Artisan Command** | Laravel commands | Clear cache, send emails |
+| **Notification** | Alerts & messages | Send user notifications |
+| **Variable** | Data manipulation | Store and modify values |
+| **JSON Extract** | Data parsing | Extract values from API responses |
+
+## 🔧 Advanced Features
+
+### Automatic Versioning
+- ✅ **Auto-save versions** when workflow structure changes
+- ✅ **Version history** with search and filtering
+- ✅ **One-click restore** to any previous version
+- ✅ **Version notes** to track what changed
+
+### Workflow Protection
+```php
+// Mark workflow as protected (cannot be deleted)
+$workflow->update(['is_deletable' => false]);
+```
+
+### Simulation Tracking
+- 📊 **Complete execution logs** for every run
+- 📈 **Success/failure statistics**
+- ⏱️ **Performance metrics** and duration tracking
+- 📋 **Downloadable execution reports**
+
+### Smart Trigger Codes
+```php
+// Latest version always uses clean trigger code
+witchcraft_trigger('FLOW_MY_PROCESS', $data); // Always runs latest version
+
+// Old versions get versioned codes automatically:
+// V1: FLOW_MY_PROCESS_OLD_V1
+// V2: FLOW_MY_PROCESS_OLD_V2
+// V3: FLOW_MY_PROCESS (current/latest)
+```
+
+## 🎨 Creating Custom Nodes
+
+### 1. Generate Node
+```bash
+php artisan witchcraft:make-node ProcessPayment --category=Payments
+```
+
+### 2. Create Handler
+```php
+namespace App\Witchcraft\Handlers;
+
+use Mariojgt\Witchcraft\Contracts\NodeHandlerInterface;
+
+class ProcessPaymentNodeHandler implements NodeHandlerInterface
+{
+    public function getMetadata(): array
+    {
+        return [
+            'type' => 'process-payment',
+            'category' => 'Payments',
+            'icon' => 'CreditCardIcon',        // Lucide icon
+            'label' => 'Process Payment',
+            'component' => 'ProcessPaymentNode',
+            'initialData' => [
+                'amount' => 0,
+                'currency' => 'USD'
+            ]
+        ];
+    }
+
+    public function execute(array $nodeData, array $variables): array
+    {
+        // Your payment processing logic here
+        $amount = $nodeData['amount'];
+
+        // Process payment...
+
+        return [
+            'success' => true,
+            'payment_id' => 'pay_123456',
+            'status' => 'completed'
+        ];
+    }
+}
+```
+
+### 3. Build Assets
+```bash
+npm run build
+```
+
+## 🔗 Model Integration
+
+Add workflow triggers to your models:
+
+```php
+use Mariojgt\Witchcraft\Traits\HasWitchcraftTriggers;
+
+class Order extends Model
+{
+    use HasWitchcraftTriggers;
+
+    // Workflows will automatically trigger on:
+    // - created, updated, deleted events
+    // - Any model changes
+}
+```
+
+## ⚙️ Configuration
+
+### Vite Setup (vite.config.js)
 ```javascript
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
-import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [
-    tailwindcss(),
     laravel({
       input: [
         'resources/vendor/Witchcraft/js/vue.js',
@@ -48,173 +195,110 @@ export default defineConfig({
       ],
       refresh: true,
     }),
-    vue({
-      template: {
-        transformAssetUrls: {
-          base: null,
-          includeAbsolute: false,
-        },
-      },
-      reactivityTransform: true
-    }),
+    vue()
   ],
   build: {
     outDir: 'public/vendor/Witchcraft',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        vue: 'resources/vendor/Witchcraft/js/vue.js',
-        css: 'resources/vendor/Witchcraft/sass/app.scss',
-      },
-    },
-  },
-  server: {
-    host: '0.0.0.0',
-    hmr: {
-      host: 'localhost'
-    }
-  },
+  }
 });
 ```
 
-## Supported Node Types
+## 🎯 Real-World Examples
 
-### 1. Model Select Node
-- Trigger workflows based on model events
-- Support for create, update, delete, and restore events
-- Test mode for easy workflow development
-
-### 2. Condition Node
-- Multiple condition types: Equals, Not Equals, Contains
-- Flexible variable sourcing
-- Support for complex comparisons
-
-### 3. Artisan Command Node
-- Execute Laravel Artisan commands within workflows
-- Capture and save command output
-- Full command line preview
-
-### 4. API Request Node
-- Make HTTP requests as part of your workflow
-- Configurable methods, headers, and body
-- Option to save response data
-
-### 5. Notification Node
-- Create custom notifications
-- Variable interpolation
-- Multiple notification types
-
-### 6. Variable Node
-- Set and manipulate variables
-- Use in complex workflow logic
-
-### 7. JSON Extract Node
-- Extract specific values from JSON data
-- Support for nested property access
-
-## Creating Custom Nodes
-
-### Generate Node Boilerplate
-```bash
-php artisan witchcraft:make-node Test --category=Testing
-```
-
-### Important: Building Custom Nodes
-After creating custom nodes, you must build them to register them properly:
-
-1. Create your node component and handler
-2. Run the build command:
-```bash
-npm run build
-# or
-yarn build
-```
-
-### Custom Node Handler Example
+### E-commerce Order Processing
 ```php
-namespace App\Witchcraft\Handlers;
-
-use Mariojgt\Witchcraft\Contracts\NodeHandlerInterface;
-
-class ProcessOrderNodeHandler implements NodeHandlerInterface
-{
-    public function getMetadata(): array
-    {
-        return [
-            'type' => 'process-order',
-            'category' => 'Custom',
-            // Use either a Lucide icon name
-            'icon' => 'BoxIcon',
-            // Or a custom SVG string
-            'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">...</svg>',
-            'label' => 'Process Order',
-            'component' => 'ProcessOrderNode',
-            'initialData' => [
-                'outputKey' => 'customOutput',
-                'example' => 'value'
-            ]
-        ];
-    }
-}
+// When order is created, trigger workflow
+witchcraft_trigger('FLOW_PROCESS_ORDER', [
+    'order_id' => $order->id,
+    'customer_email' => $order->customer->email,
+    'total' => $order->total
+]);
 ```
 
-## Basic Usage
-
-### Creating a Workflow
-1. Navigate to the Workflow Editor
-2. Drag and drop nodes
-3. Connect nodes to create your workflow logic
-4. Save and execute
-
-### Example Workflow
-```
-[Model Select] -> [Condition] -> [Notification/Artisan Command]
-```
-
-## Advanced Features
-
-### Model Event Triggers
-Add the `HasWitchcraftTriggers` trait to your models:
+### User Onboarding
 ```php
-use Mariojgt\Witchcraft\Traits\HasWitchcraftTriggers;
-
-class User extends Model
-{
-    use HasWitchcraftTriggers;
-    // Your model code
-}
+// Welcome new users
+witchcraft_trigger('FLOW_USER_WELCOME', [
+    'user_id' => $user->id,
+    'email' => $user->email,
+    'name' => $user->name
+]);
 ```
 
-### Programmatic Workflow Execution
+### Data Backup
 ```php
-use Mariojgt\Witchcraft\Services\WitchcraftTrigger;
-
-// Execute a workflow
-$flowDiagram = FlowDiagram::find(25);
-$executor = new FlowExecutor($flowDiagram);
-$initialData = [
-    'userStatus' => '{"success":true,"result":{"success":"mario","output":[],"message":"Source variable modelEvent not found"}}'
-];
-$result = $executor->run($initialData);
-dd($result);
+// Daily backup workflow
+witchcraft_trigger('FLOW_DAILY_BACKUP', [
+    'date' => now()->toDateString(),
+    'tables' => ['users', 'orders', 'products']
+]);
 ```
 
-## Configuration
-Publish the configuration file to customize package behavior:
-```bash
-php artisan vendor:publish --tag="witchcraft-config"
+## 🛠️ Helper Functions Reference
+
+| Function | Purpose | Returns |
+|----------|---------|---------|
+| `witchcraft_trigger($code, $data)` | Execute workflow | Mixed result |
+| `witchcraft_safe_trigger($code, $data)` | Execute with error handling | Array with success/error |
+| `witchcraft_exists($code)` | Check if workflow exists | Boolean |
+| `witchcraft_info($code)` | Get workflow details | Array with metadata |
+| `witchcraft_execute($code, $data)` | Alias for trigger | Mixed result |
+| `witchcraft_run($code, $data)` | Alias for trigger | Mixed result |
+
+## 📊 Workflow Management
+
+### Access Editor
+```
+/witchcraft
 ```
 
-## Contributing
+### Key Features
+- 🎨 **Drag & drop** node creation
+- 🔗 **Visual connections** between nodes
+- 💾 **Auto-save** with version control
+- 🔍 **Search & filter** workflows
+- 📁 **Category organization**
+- 🛡️ **Protection settings**
+- 📈 **Execution history**
+
+## 📚 Advanced Usage
+
+### Conditional Workflows
+Create complex decision trees with condition nodes:
+```
+[Trigger] → [Check Status] → [If Active] → [Send Email]
+                           → [If Inactive] → [Deactivate Account]
+```
+
+### API Integration Workflows
+```
+[Trigger] → [API Request] → [Extract Data] → [Save to Database] → [Notify Admin]
+```
+
+### Batch Processing
+```
+[Schedule] → [Get Records] → [Process Each] → [Update Status] → [Generate Report]
+```
+
+## 🤝 Contributing
+
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
+## 📄 License
+
 This package is open-sourced software licensed under the [MIT license](LICENSE.md).
 
-## Credits
+## 👨‍💻 Credits
+
 - [Mario Tarosso](https://github.com/mariojgt)
 - [All Contributors](../../contributors)
+
+---
+
+### 🚀 Ready to automate your workflows?
+
+**[Install Witchcraft →](https://packagist.org/packages/mariojgt/witchcraft)**
