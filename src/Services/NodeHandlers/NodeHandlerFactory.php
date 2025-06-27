@@ -19,6 +19,7 @@ class NodeHandlerFactory
         'triggerflow' => TriggerFlowHandler::class,
         'modellookup' => ModelLookupHandler::class,
         'datecondition' => DateConditionHandler::class,
+        'return' => ReturnHandler::class,
     ];
 
     public static function create($nodeType)
