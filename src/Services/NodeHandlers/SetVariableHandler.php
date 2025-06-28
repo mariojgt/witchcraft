@@ -14,9 +14,10 @@ class SetVariableHandler extends BaseNodeHandler
             $persistent = $this->getData($node, 'persistent', false);
             $cacheExpiry = $this->getData($node, 'cacheExpiry');
 
-            // New functionality: Check if we should use extracted value
+            // Enhanced functionality: Check if we should use extracted value
             $useExtractedValue = $this->getData($node, 'useExtractedValue', false);
             $sourceVariable = $this->getData($node, 'sourceVariable', 'extractedValue');
+            $extractPath = $this->getData($node, 'extractPath'); // ✨ NEW: Support for nested path extraction
 
             if (empty($variableName)) {
                 return $this->error('Variable name is required');
@@ -28,8 +29,22 @@ class SetVariableHandler extends BaseNodeHandler
                 if (!isset($variables[$sourceVariable])) {
                     return $this->error("Source variable '{$sourceVariable}' not found in workflow variables");
                 }
+
                 $rawValue = $variables[$sourceVariable];
-                $message = "Variable '{$variableName}' set from source variable '{$sourceVariable}'";
+
+                // ✨ NEW: Apply path extraction if specified
+                if (!empty($extractPath)) {
+                    $extractedValue = $this->extractValueByPath($rawValue, $extractPath);
+
+                    if ($extractedValue === null) {
+                        return $this->error("Path '{$extractPath}' not found in source variable '{$sourceVariable}'");
+                    }
+
+                    $rawValue = $extractedValue;
+                    $message = "Variable '{$variableName}' set from source variable '{$sourceVariable}.{$extractPath}'";
+                } else {
+                    $message = "Variable '{$variableName}' set from source variable '{$sourceVariable}'";
+                }
             } else {
                 // Use manual input value
                 $variableValue = $this->getData($node, 'variableValue');
@@ -68,16 +83,64 @@ class SetVariableHandler extends BaseNodeHandler
                 $message .= " in workflow memory";
             }
 
-            // Append the 'extractedValue' to the output for edge routing
-            if (isset($variables['extractedValue'])) {
-                $output['extractedValue'] = $finalValue;
-                $message .= " with extracted value";
-            }
+            // Always append the 'extractedValue' to the output for edge routing
+            $output['extractedValue'] = $finalValue;
+            $message .= " with extracted value";
 
             return $this->success($output, $message);
         } catch (\Exception $e) {
             return $this->error("Failed to set variable: " . $e->getMessage());
         }
+    }
+
+    /**
+     * ✨ NEW: Extract value from object/array using dot notation path
+     * Same implementation as FlowVariableHandler for consistency
+     *
+     * @param mixed $data The data to extract from
+     * @param string $path The dot notation path (e.g., 'user.email' or 'data.0.name')
+     * @return mixed The extracted value or null if not found
+     */
+    private function extractValueByPath($data, string $path)
+    {
+        if (empty($path)) {
+            return $data;
+        }
+
+        $keys = explode('.', $path);
+        $current = $data;
+
+        foreach ($keys as $key) {
+            if ($current === null) {
+                return null;
+            }
+
+            // Handle array indices
+            if (is_numeric($key)) {
+                $index = (int) $key;
+                if (is_array($current) && isset($current[$index])) {
+                    $current = $current[$index];
+                } else {
+                    return null;
+                }
+            }
+            // Handle object properties
+            elseif (is_array($current) && array_key_exists($key, $current)) {
+                $current = $current[$key];
+            }
+            // Handle object properties (if it's a stdClass or similar)
+            elseif (is_object($current) && property_exists($current, $key)) {
+                $current = $current->$key;
+            }
+            // Handle object properties (using array access for objects that support it)
+            elseif (is_object($current) && method_exists($current, 'offsetExists') && $current->offsetExists($key)) {
+                $current = $current[$key];
+            } else {
+                return null;
+            }
+        }
+
+        return $current;
     }
 
     /**
@@ -224,5 +287,84 @@ class SetVariableHandler extends BaseNodeHandler
         }
 
         return $value;
+    }
+
+    /**
+     * ✨ NEW: Debug helper method to validate paths during development
+     * This can be used for testing path extraction
+     */
+    public function validatePath($data, string $path): array
+    {
+        if (empty($path)) {
+            return [
+                'valid' => true,
+                'message' => 'No path specified, will return original value',
+                'result_type' => gettype($data)
+            ];
+        }
+
+        try {
+            $result = $this->extractValueByPath($data, $path);
+
+            if ($result === null) {
+                return [
+                    'valid' => false,
+                    'message' => "Path '{$path}' does not exist in the provided data",
+                    'available_paths' => $this->getAvailablePaths($data)
+                ];
+            }
+
+            return [
+                'valid' => true,
+                'message' => "Path '{$path}' is valid",
+                'result_type' => gettype($result),
+                'result_preview' => is_string($result) && strlen($result) > 50
+                    ? substr($result, 0, 50) . '...'
+                    : $result
+            ];
+        } catch (\Exception $e) {
+            return [
+                'valid' => false,
+                'message' => "Error validating path: " . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * ✨ NEW: Get all available paths for a given data structure
+     * Useful for debugging and path discovery
+     */
+    private function getAvailablePaths($data, string $prefix = '', int $maxDepth = 3, int $currentDepth = 0): array
+    {
+        $paths = [];
+
+        if ($currentDepth >= $maxDepth) {
+            return $paths;
+        }
+
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $newPath = $prefix ? $prefix . '.' . $key : $key;
+                $paths[] = $newPath;
+
+                if (is_array($value) || is_object($value)) {
+                    $subPaths = $this->getAvailablePaths($value, $newPath, $maxDepth, $currentDepth + 1);
+                    $paths = array_merge($paths, $subPaths);
+                }
+            }
+        } elseif (is_object($data)) {
+            $properties = get_object_vars($data);
+            foreach ($properties as $key => $value) {
+                $newPath = $prefix ? $prefix . '.' . $key : $key;
+                $paths[] = $newPath;
+
+                if (is_array($value) || is_object($value)) {
+                    $subPaths = $this->getAvailablePaths($value, $newPath, $maxDepth, $currentDepth + 1);
+                    $paths = array_merge($paths, $subPaths);
+                }
+            }
+        }
+
+        return $paths;
     }
 }

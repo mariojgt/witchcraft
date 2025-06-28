@@ -103,6 +103,10 @@
                         title="Node Settings">
                     <SettingsIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
                 </button>
+                <BreakpointToggle
+                    :node-id="id"
+                    variant="default"
+                />
 
                 <!-- Delete button -->
                 <button @click="$emit('delete')"
@@ -355,6 +359,7 @@
 import { ref, onMounted, nextTick } from 'vue';
 import { Handle } from '@vue-flow/core';
 import { XIcon, MessageSquareIcon, SettingsIcon, SearchIcon } from "lucide-vue-next"
+import BreakpointToggle from '../nodeComponents/BreakpointToggle.vue'
 
 const props = defineProps(['data', 'variables']);
 const emit = defineEmits(['delete']);

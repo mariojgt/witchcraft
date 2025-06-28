@@ -13,13 +13,79 @@ export default class SimulationService {
         this.isRunning = false;
         this.pauseResolvers = [];
         this.onPauseStateChange = null;
+
+        // NEW: Breakpoint functionality
+        this.breakpoints = new Set(); // Node IDs that have breakpoints
+        this.onBreakpointHit = null; // Callback when breakpoint is hit
+    }
+
+    // NEW: Breakpoint management methods
+    addBreakpoint(nodeId) {
+        this.breakpoints.add(nodeId);
+        this.addLog(`Breakpoint added to node: ${nodeId}`, 'info');
+    }
+
+    removeBreakpoint(nodeId) {
+        this.breakpoints.delete(nodeId);
+        this.addLog(`Breakpoint removed from node: ${nodeId}`, 'info');
+    }
+
+    toggleBreakpoint(nodeId) {
+        if (this.breakpoints.has(nodeId)) {
+            this.removeBreakpoint(nodeId);
+            return false;
+        } else {
+            this.addBreakpoint(nodeId);
+            return true;
+        }
+    }
+
+    hasBreakpoint(nodeId) {
+        return this.breakpoints.has(nodeId);
+    }
+
+    clearAllBreakpoints() {
+        this.breakpoints.clear();
+        this.addLog('All breakpoints cleared', 'info');
+    }
+
+    // Get all breakpoints (for debugging)
+    getBreakpoints() {
+        return Array.from(this.breakpoints);
+    }
+
+    // NEW: Check for breakpoint hit
+    async checkBreakpoint(nodeId) {
+        if (!this.isRunning) {
+            throw new Error('Simulation stopped');
+        }
+
+        if (this.breakpoints.has(nodeId)) {
+            this.addLog(`🔴 Breakpoint hit at node: ${nodeId}`, 'warning');
+
+            // Automatically pause when breakpoint is hit
+            this.isPaused = true;
+
+            if (this.onPauseStateChange) {
+                this.onPauseStateChange(this.isPaused, this.isRunning);
+            }
+
+            if (this.onBreakpointHit) {
+                this.onBreakpointHit(nodeId);
+            }
+
+            // Wait for user to resume
+            return new Promise(resolve => {
+                this.pauseResolvers.push(resolve);
+            });
+        }
     }
 
     setSimulationSpeed(speed) {
         this.simulationSpeed = speed;
     }
 
-    // New pause controls
+    // Pause controls (unchanged)
     pause() {
         if (!this.isRunning) return;
 
@@ -61,7 +127,7 @@ export default class SimulationService {
         }
     }
 
-    // Helper method to check for pause
+    // Helper method to check for pause (unchanged)
     async checkPause() {
         if (!this.isRunning) {
             throw new Error('Simulation stopped');
@@ -81,6 +147,7 @@ export default class SimulationService {
         this.isRunning = false;
         this.isPaused = false;
         this.pauseResolvers = [];
+        // NOTE: Don't clear breakpoints on reset - they should persist
 
         if (this.onNodeStatusChange) {
             this.onNodeStatusChange(this.nodeStatuses, null);
@@ -148,6 +215,9 @@ export default class SimulationService {
         try {
             // Check for pause/stop before processing
             await this.checkPause();
+
+            // NEW: Check for breakpoint BEFORE processing the node
+            await this.checkBreakpoint(node.id);
 
             // Clear any existing node highlights
             this.currentNodeId = node.id;
@@ -228,6 +298,10 @@ export default class SimulationService {
             // Handle conditional nodes
             if ('conditionResult' in result) {
                 shouldFollow = edge.sourceHandle === (result.conditionResult ? 'true' : 'false');
+            }
+            // Handle conditional cases for this object result.output.conditionResult
+            if ('conditionResult' in result.output) {
+                shouldFollow = edge.sourceHandle === (result.output.conditionResult ? 'true' : 'false');
             }
 
             if ('selectedCase' in result) {

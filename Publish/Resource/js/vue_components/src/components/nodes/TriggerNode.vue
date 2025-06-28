@@ -26,7 +26,7 @@
 
                     <div class="flex items-center gap-2 mt-0.5">
                         <p class="text-xs text-gray-400 leading-none truncate">
-                            {{ data.customDescription || 'Manual workflow trigger' }}
+                            {{ data.customDescription || `Trigger with ${data.variables?.length || 0} variables` }}
                         </p>
                         <!-- Comment indicator with hover tooltip -->
                         <div v-if="data.comment && data.comment.trim()"
@@ -48,6 +48,9 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ✨ NEW: Execution Status Indicator -->
+                        <div v-if="isCurrentlyExecuting" class="w-3 h-3 bg-blue-500 rounded-full animate-pulse" title="Currently Executing"></div>
                     </div>
                 </div>
             </div>
@@ -137,19 +140,167 @@
             </div>
         </div>
 
-        <!-- Content -->
+        <!-- ✨ NEW: Multiple Variables Section -->
         <div class="space-y-4">
-            <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">Variable Name</label>
-                <input v-model="data.variableName" placeholder="userStatus" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+            <!-- Header with Add Button -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <label class="block text-xs font-medium text-gray-300 tracking-wide">Variables</label>
+                    <span class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
+                        {{ data.variables?.length || 0 }} items
+                    </span>
+                </div>
+                <button @click="addVariable"
+                        class="flex items-center gap-1 px-2 py-1 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded transition-colors">
+                    <PlusIcon class="w-3 h-3" />
+                    Add Variable
+                </button>
             </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">Initial Value</label>
-                <input v-model="data.initialValue" placeholder="active" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+
+            <!-- Variables List -->
+            <div class="space-y-3 max-h-64 overflow-y-auto">
+                <!-- Empty State -->
+                <div v-if="!data.variables || data.variables.length === 0"
+                     class="text-center py-8 text-gray-400 border border-dashed border-gray-600 rounded-lg">
+                    <DatabaseIcon class="w-8 h-8 mx-auto mb-2 text-gray-500" />
+                    <div class="text-sm">No variables defined</div>
+                    <div class="text-xs mt-1">Click "Add Variable" to get started</div>
+                </div>
+
+                <!-- Variable Items -->
+                <div v-for="(variable, index) in data.variables"
+                     :key="variable.id"
+                     class="bg-white/5 border border-white/10 rounded-lg p-3 space-y-3 group hover:bg-white/10 transition-all duration-200">
+
+                    <!-- Variable Header -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 bg-green-500/20 border border-green-500/30 rounded flex items-center justify-center">
+                                <span class="text-xs text-green-400 font-mono">{{ index + 1 }}</span>
+                            </div>
+                            <span class="text-sm text-gray-300">Variable {{ index + 1 }}</span>
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <!-- Collapse/Expand Button -->
+                            <button @click="toggleVariableCollapse(index)"
+                                    class="w-6 h-6 rounded hover:bg-white/10 flex items-center justify-center transition-colors"
+                                    :title="variable.collapsed ? 'Expand' : 'Collapse'">
+                                <ChevronDownIcon :class="`w-4 h-4 text-gray-400 transition-transform ${variable.collapsed ? '-rotate-90' : ''}`" />
+                            </button>
+
+                            <!-- Delete Button -->
+                            <button @click="removeVariable(index)"
+                                    class="w-6 h-6 rounded hover:bg-red-500/20 flex items-center justify-center transition-colors group opacity-0 group-hover:opacity-100">
+                                <XIcon class="w-4 h-4 text-red-400" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Variable Fields (Collapsible) -->
+                    <div v-if="!variable.collapsed" class="space-y-3">
+                        <!-- Variable Name -->
+                        <div class="space-y-1">
+                            <label class="block text-xs text-gray-400">Variable Name</label>
+                            <input v-model="variable.name"
+                                   placeholder="e.g., userStatus, temperature, count"
+                                   class="w-full text-sm bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 transition-all duration-200 outline-none" />
+                        </div>
+
+                        <!-- Initial Value -->
+                        <div class="space-y-1">
+                            <label class="block text-xs text-gray-400">Initial Value</label>
+                            <input v-model="variable.initialValue"
+                                   placeholder="e.g., active, 25, hello world"
+                                   class="w-full text-sm bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 transition-all duration-200 outline-none" />
+                        </div>
+
+                        <!-- Data Type -->
+                        <div class="space-y-1">
+                            <label class="block text-xs text-gray-400">Data Type</label>
+                            <select v-model="variable.type"
+                                    class="w-full text-sm bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white focus:bg-white/10 focus:border-green-500/50 transition-all duration-200 outline-none">
+                                <option value="string">String</option>
+                                <option value="number">Number</option>
+                                <option value="boolean">Boolean</option>
+                                <option value="json">JSON Object</option>
+                                <option value="array">Array</option>
+                            </select>
+                        </div>
+
+                        <!-- Description (Optional) -->
+                        <div class="space-y-1">
+                            <label class="block text-xs text-gray-400">Description (Optional)</label>
+                            <input v-model="variable.description"
+                                   placeholder="Brief description of this variable's purpose"
+                                   class="w-full text-sm bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 transition-all duration-200 outline-none" />
+                        </div>
+
+                        <!-- Preview -->
+                        <div v-if="variable.name" class="bg-gray-800/50 rounded p-2">
+                            <div class="text-xs text-gray-400 mb-1">Preview:</div>
+                            <div class="text-xs font-mono">
+                                <span class="text-green-300">{{ variable.name }}</span>:
+                                <span class="text-yellow-300">{{ getFormattedValue(variable) }}</span>
+                                <span class="text-gray-500 ml-2">({{ variable.type }})</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collapsed Preview -->
+                    <div v-else class="text-xs text-gray-400">
+                        <span class="text-green-300">{{ variable.name || 'Unnamed' }}</span>:
+                        <span class="text-yellow-300">{{ getFormattedValue(variable) }}</span>
+                        <span class="text-gray-500 ml-1">({{ variable.type }})</span>
+                    </div>
+                </div>
             </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">Output Key</label>
-                <input v-model="data.outputKey" placeholder="status" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 outline-none" />
+
+            <!-- ✨ NEW: Output Summary -->
+            <div v-if="data.variables && data.variables.length > 0" class="bg-white/5 border border-white/10 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-2">
+                    <span class="text-gray-300 font-medium">Output Preview:</span>
+                    <span v-if="isCurrentlyExecuting" class="ml-2 text-blue-400">● Currently Executing</span>
+                </div>
+
+                <div class="bg-gray-800 p-2 rounded text-xs">
+                    <pre class="text-green-300 whitespace-pre-wrap">{{ getOutputPreview() }}</pre>
+                </div>
+
+                <!-- ✨ NEW: Recent Activity Logs -->
+                <div v-if="triggerLogs.length > 0" class="mt-3 pt-2 border-t border-gray-700">
+                    <div class="text-xs text-gray-400 mb-1">Recent Activity:</div>
+                    <div class="space-y-1 max-h-16 overflow-y-auto">
+                        <div v-for="log in triggerLogs.slice(-2)"
+                             :key="log.timestamp"
+                             class="text-xs p-1 rounded"
+                             :class="{
+                                 'text-green-300': log.type === 'success',
+                                 'text-red-300': log.type === 'error',
+                                 'text-yellow-300': log.type === 'warning',
+                                 'text-blue-300': log.type === 'info',
+                                 'text-gray-300': !log.type
+                             }">
+                            {{ log.message }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div v-if="data.variables && data.variables.length > 0" class="flex gap-2">
+                <button @click="collapseAll"
+                        class="flex-1 text-xs py-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded transition-colors">
+                    Collapse All
+                </button>
+                <button @click="expandAll"
+                        class="flex-1 text-xs py-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 rounded transition-colors">
+                    Expand All
+                </button>
+                <button @click="clearAll"
+                        class="flex-1 text-xs py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded transition-colors">
+                    Clear All
+                </button>
             </div>
         </div>
 
@@ -161,12 +312,22 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { Handle } from '@vue-flow/core'
-import { XIcon, DatabaseIcon, MessageSquareIcon, SettingsIcon } from 'lucide-vue-next'
+import {
+    XIcon, DatabaseIcon, MessageSquareIcon, SettingsIcon,
+    PlusIcon, ChevronDownIcon
+} from 'lucide-vue-next'
 import { defineOptions } from 'vue'
 
-const props = defineProps(['data'])
+// ✨ ENHANCED Props to include simulation data
+const props = defineProps([
+    'data',
+    'id',
+    'variables',          // ✨ Live simulation variables
+    'simulationLogs',     // ✨ All simulation logs
+    'currentNodeId'       // ✨ Currently executing node
+])
 defineEmits(['delete'])
 
 // UI state
@@ -188,6 +349,134 @@ const colorThemes = [
     { name: 'gray', label: 'Gray', gradient: 'linear-gradient(145deg, #6b7280, #4b5563)' },
     { name: 'orange', label: 'Orange', gradient: 'linear-gradient(145deg, #f97316, #ea580c)' }
 ]
+
+// ✨ NEW: Simulation data computed properties
+const isCurrentlyExecuting = computed(() => {
+    return props.currentNodeId === props.id
+})
+
+const triggerLogs = computed(() => {
+    if (!props.simulationLogs) return []
+    return props.simulationLogs.filter(log =>
+        log.message && (log.message.includes('Trigger') || log.message.includes('trigger'))
+    )
+})
+
+// ✨ NEW: Variable management functions
+function addVariable() {
+    if (!props.data.variables) {
+        props.data.variables = []
+    }
+
+    const newVariable = {
+        id: Date.now() + Math.random(), // Simple unique ID
+        name: '',
+        initialValue: '',
+        type: 'string',
+        description: '',
+        collapsed: false
+    }
+
+    props.data.variables.push(newVariable)
+}
+
+function removeVariable(index) {
+    if (props.data.variables && props.data.variables.length > index) {
+        props.data.variables.splice(index, 1)
+    }
+}
+
+function toggleVariableCollapse(index) {
+    if (props.data.variables && props.data.variables[index]) {
+        props.data.variables[index].collapsed = !props.data.variables[index].collapsed
+    }
+}
+
+function collapseAll() {
+    if (props.data.variables) {
+        props.data.variables.forEach(variable => {
+            variable.collapsed = true
+        })
+    }
+}
+
+function expandAll() {
+    if (props.data.variables) {
+        props.data.variables.forEach(variable => {
+            variable.collapsed = false
+        })
+    }
+}
+
+function clearAll() {
+    if (confirm('Are you sure you want to clear all variables? This action cannot be undone.')) {
+        props.data.variables = []
+    }
+}
+
+function getFormattedValue(variable) {
+    if (!variable.initialValue) return '""'
+
+    switch (variable.type) {
+        case 'number':
+            return isNaN(Number(variable.initialValue)) ? '0' : Number(variable.initialValue)
+        case 'boolean':
+            return variable.initialValue.toLowerCase() === 'true' || variable.initialValue === '1'
+        case 'json':
+        case 'array':
+            try {
+                return JSON.stringify(JSON.parse(variable.initialValue))
+            } catch (e) {
+                return `"${variable.initialValue}"`
+            }
+        default:
+            return `"${variable.initialValue}"`
+    }
+}
+
+function getOutputPreview() {
+    if (!props.data.variables || props.data.variables.length === 0) {
+        return '{}'
+    }
+
+    const output = {}
+
+    props.data.variables.forEach(variable => {
+        if (variable.name) {
+            let value = variable.initialValue || ''
+
+            // Convert based on type
+            switch (variable.type) {
+                case 'number':
+                    value = isNaN(Number(value)) ? 0 : Number(value)
+                    break
+                case 'boolean':
+                    value = value.toLowerCase() === 'true' || value === '1'
+                    break
+                case 'json':
+                case 'array':
+                    try {
+                        value = JSON.parse(value)
+                    } catch (e) {
+                        value = value
+                    }
+                    break
+            }
+
+            output[variable.name] = value
+        }
+    })
+
+    // Always include extractedValue as the first variable's value or null
+    const firstVariable = props.data.variables.find(v => v.name)
+    if (firstVariable) {
+        output.extractedValue = output[firstVariable.name]
+    } else {
+        output.extractedValue = null
+    }
+
+    return JSON.stringify(output, null, 2)
+}
 
 // Color theme functions
 function getHeaderIconClass() {
@@ -261,11 +550,18 @@ defineOptions({
         category: 'Trigger',
         icon: DatabaseIcon,
         label: 'Trigger',
+        description: 'Define multiple variables to trigger workflow',
         initialData: {
-            variableName: 'userStatus',
-            initialValue: 'active',
-            outputKey: 'status',
-            // Enhanced properties
+            variables: [
+                {
+                    id: Date.now(),
+                    name: 'userStatus',
+                    initialValue: 'active',
+                    type: 'string',
+                    description: 'Current user status',
+                    collapsed: false
+                }
+            ],
             customTitle: "",
             customDescription: "",
             comment: "",
@@ -380,4 +676,33 @@ defineOptions({
         transform: translateX(0);
     }
 }
+
+/* Custom scrollbar for variables list */
+.max-h-64::-webkit-scrollbar {
+    width: 4px;
+}
+
+.max-h-64::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.max-h-64::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.3);
+    border-radius: 2px;
+}
+
+.max-h-64::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.5);
+}
+
+/* Smooth animations for variable items */
+.group {
+    transition: all 0.2s ease-in-out;
+}
+
+.group:hover {
+    transform: translateY(-1px);
+}
+
 </style>

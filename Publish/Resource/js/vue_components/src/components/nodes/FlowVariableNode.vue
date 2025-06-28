@@ -84,7 +84,10 @@
                         title="Node Settings">
                     <SettingsIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
                 </button>
-
+                <BreakpointToggle
+                    :node-id="id"
+                    variant="default"
+                />
                 <!-- Delete button -->
                 <button @click="$emit('delete')"
                         class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-200 flex items-center justify-center group">
@@ -338,6 +341,7 @@ import {
     XIcon, VariableIcon, CheckIcon, MessageSquareIcon, SettingsIcon,
     SearchIcon, CopyIcon
 } from 'lucide-vue-next'
+import BreakpointToggle from '../nodeComponents/BreakpointToggle.vue'
 
 // ✨ ENHANCED Props to include simulation data
 const props = defineProps([

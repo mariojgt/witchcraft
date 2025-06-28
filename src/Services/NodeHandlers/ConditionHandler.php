@@ -101,20 +101,97 @@ class ConditionHandler extends BaseNodeHandler
     private function evaluateCondition($actualValue, $expectedValue, string $conditionType, array $data = []): bool
     {
         return match ($conditionType) {
+            // Basic equality and content checks
             'equals' => $actualValue == $expectedValue,
             'notEquals' => $actualValue != $expectedValue,
             'contains' => is_string($actualValue) && is_string($expectedValue)
                 ? str_contains(strtolower($actualValue), strtolower($expectedValue)) : false,
-            'greaterThan' => is_numeric($actualValue) && is_numeric($expectedValue)
-                ? (float)$actualValue > (float)$expectedValue : false,
-            'lessThan' => is_numeric($actualValue) && is_numeric($expectedValue)
-                ? (float)$actualValue < (float)$expectedValue : false,
+
+            // Numeric comparisons - now includes all 4 operators
+            'greaterThan' => $this->compareNumbers($actualValue, $expectedValue, '>'),
+            'greaterThanOrEqual' => $this->compareNumbers($actualValue, $expectedValue, '>='),
+            'lessThan' => $this->compareNumbers($actualValue, $expectedValue, '<'),
+            'lessThanOrEqual' => $this->compareNumbers($actualValue, $expectedValue, '<='),
+
+            // Empty/null checks
             'isEmpty' => empty($actualValue),
             'isNotEmpty' => !empty($actualValue),
+
+            // Change detection
             'changed' => $actualValue != ($data['previousValue'] ?? null),
+
+            // Array membership
             'inArray' => $this->checkInArray($actualValue, $expectedValue),
+
+            // Generic string pattern matching - these are more flexible and reusable
+            'stringContainsPattern' => $this->checkStringPattern($actualValue, $expectedValue),
+            'multipleStringContains' => $this->checkMultipleStringContains($actualValue, $expectedValue),
+
             default => false
         };
+    }
+
+    /**
+     * Compare two values numerically with proper type checking
+     *
+     * @param mixed $actual The actual value from the variable
+     * @param mixed $expected The expected value to compare against
+     * @param string $operator The comparison operator ('>', '>=', '<', '<=')
+     * @return bool The result of the comparison
+     */
+    private function compareNumbers($actual, $expected, string $operator): bool
+    {
+        // First check if both values can be treated as numbers
+        if (!is_numeric($actual) || !is_numeric($expected)) {
+            return false;
+        }
+
+        // Convert to float for accurate comparison
+        $actualNum = (float) $actual;
+        $expectedNum = (float) $expected;
+
+        return match ($operator) {
+            '>' => $actualNum > $expectedNum,
+            '>=' => $actualNum >= $expectedNum,
+            '<' => $actualNum < $expectedNum,
+            '<=' => $actualNum <= $expectedNum,
+            default => false
+        };
+    }
+
+    /**
+     * Check if string contains a specific pattern (case-insensitive)
+     * This is generic and can be used for any pattern matching needs
+     */
+    private function checkStringPattern($haystack, $pattern): bool
+    {
+        if (!is_string($haystack) || !is_string($pattern)) {
+            return false;
+        }
+
+        return stripos($haystack, $pattern) !== false;
+    }
+
+    /**
+     * Check if string contains multiple patterns (all must be present)
+     * Format: "pattern1|pattern2|pattern3"
+     * This is generic and can handle any combination of patterns
+     */
+    private function checkMultipleStringContains($haystack, $patterns): bool
+    {
+        if (!is_string($haystack) || !is_string($patterns)) {
+            return false;
+        }
+
+        $patternList = array_map('trim', explode('|', $patterns));
+
+        foreach ($patternList as $pattern) {
+            if (stripos($haystack, $pattern) === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -156,5 +233,84 @@ class ConditionHandler extends BaseNodeHandler
         }
 
         return $variables[$path] ?? null;
+    }
+
+    /**
+     * Enhanced replace variables method that supports dot notation
+     * Overrides the base class method with additional functionality
+     */
+    protected function replaceVariables($text, $variables)
+    {
+        if (empty($text)) {
+            return $text;
+        }
+
+        return preg_replace_callback('/\{\{([^}]+)\}\}/', function ($matches) use ($variables) {
+            $variablePath = trim($matches[1]);
+            $value = $this->getVariableValue($variables, $variablePath);
+
+            // Convert value to string representation
+            if (is_null($value)) {
+                return '';
+            } elseif (is_bool($value)) {
+                return $value ? 'true' : 'false';
+            } elseif (is_array($value) || is_object($value)) {
+                return json_encode($value);
+            } else {
+                return (string) $value;
+            }
+        }, $text);
+    }
+
+    /**
+     * Validate condition configuration
+     */
+    public function validateCondition(array $condition): array
+    {
+        $errors = [];
+
+        if (empty($condition['compareVariable'])) {
+            $errors[] = 'Compare variable is required';
+        }
+
+        $conditionType = $condition['conditionType'] ?? '';
+        $numericOperators = ['greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual'];
+
+        if (in_array($conditionType, $numericOperators)) {
+            $expectedValue = $condition['expectedValue'] ?? '';
+            if (!empty($expectedValue) && !is_numeric($expectedValue)) {
+                $errors[] = "Expected value must be numeric for '{$conditionType}' comparison";
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get human-readable description of a condition
+     */
+    public function describeCondition(array $condition): string
+    {
+        $variable = $condition['compareVariable'] ?? 'variable';
+        $type = $condition['conditionType'] ?? 'equals';
+        $expected = $condition['expectedValue'] ?? 'value';
+
+        $descriptions = [
+            'equals' => "{$variable} equals {$expected}",
+            'notEquals' => "{$variable} does not equal {$expected}",
+            'contains' => "{$variable} contains '{$expected}'",
+            'greaterThan' => "{$variable} > {$expected}",
+            'greaterThanOrEqual' => "{$variable} >= {$expected}",
+            'lessThan' => "{$variable} < {$expected}",
+            'lessThanOrEqual' => "{$variable} <= {$expected}",
+            'isEmpty' => "{$variable} is empty",
+            'isNotEmpty' => "{$variable} is not empty",
+            'changed' => "{$variable} has changed",
+            'inArray' => "{$variable} is in list [{$expected}]",
+            'stringContainsPattern' => "{$variable} contains pattern '{$expected}'",
+            'multipleStringContains' => "{$variable} contains all patterns: {$expected}"
+        ];
+
+        return $descriptions[$type] ?? "{$variable} {$type} {$expected}";
     }
 }

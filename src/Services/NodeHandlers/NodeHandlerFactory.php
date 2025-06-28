@@ -23,6 +23,8 @@ class NodeHandlerFactory
         'flowvariable' => FlowVariableHandler::class,
         'combinevariables' => CombineVariablesHandler::class,
         'comment' => CommentHandler::class,
+        'calculation' => CalculationHandler::class,
+        'sticker' => StickerHandler::class,
     ];
 
     public static function create($nodeType)

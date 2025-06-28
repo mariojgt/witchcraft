@@ -31,7 +31,9 @@ class ModelLookupHandler extends BaseNodeHandler
         if (!empty($sourceVariable)) {
             $searchValue = $this->getNestedVariableValue($variables, $sourceVariable);
             if ($searchValue === null) {
-                return $this->error("Source variable path '{$sourceVariable}' not found or is null in workflow variables.");
+                return $this->success([
+                    'conditionResult' => false
+                ], "Source variable path '{$sourceVariable}' not found or is null in workflow variables.");
             }
         } elseif (isset($variables['extractedValue'])) {
             $searchValue = $variables['extractedValue'];
@@ -100,7 +102,7 @@ class ModelLookupHandler extends BaseNodeHandler
             }
 
             $data = [
-                'modelFound' => $recordWasFound,
+                'conditionResult' => $recordWasFound,
                 $outputKey => $extractedData,
                 'extractedValue' => $extractedData,
                 'searchField' => $searchField,
@@ -323,8 +325,7 @@ class ModelLookupHandler extends BaseNodeHandler
 
             foreach ($methods as $method) {
                 // Skip magic methods, getters, and common model methods
-                if (
-                    $method->getDeclaringClass()->getName() === Model::class ||
+                if ($method->getDeclaringClass()->getName() === Model::class ||
                     $method->getDeclaringClass()->getName() === 'Illuminate\Database\Eloquent\Model' ||
                     Str::startsWith($method->getName(), ['get', 'set', 'is', 'has', 'scope']) ||
                     in_array($method->getName(), ['save', 'delete', 'update', 'create', 'find', 'where'])

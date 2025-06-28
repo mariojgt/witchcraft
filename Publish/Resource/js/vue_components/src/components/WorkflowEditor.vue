@@ -98,7 +98,7 @@
                                 v-model="simulationSpeed"
                                 @input="changeSimulationSpeed($event.target.value)"
                                 type="range"
-                                min="100"
+                                min="1"
                                 max="3000"
                                 step="100"
                                 class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
@@ -347,16 +347,24 @@
                     @dragover.prevent
                     @drop="onDrop"
                     @pane-click="onPaneClick"
+                    @mousedown="startCustomSelection"
+                    @contextmenu="handleContextMenu"
                     class="workflow-canvas"
                     :default-viewport="{ zoom: 0.8 }"
                     :min-zoom="0.1"
                     :max-zoom="2"
                     :selection-key-code="null"
-                    :multi-selection-key-code="['Meta', 'Control']"
+                    :multi-selection-key-code="['Meta', 'Control', 'Shift']"
                     :delete-key-code="['Delete', 'Backspace']"
                     :snap-to-grid="snapToGrid"
                     :snap-grid="[20, 20]"
                 >
+                    <!-- Add this selection box overlay inside VueFlow, after the Background components -->
+                    <div
+                        v-if="customSelection.isSelecting"
+                        :style="selectionBoxStyle"
+                        class="custom-selection-box"
+                    ></div>
                     <!-- Enhanced Grid Background -->
                     <Background
                         variant="dots"
@@ -604,7 +612,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, markRaw, nextTick, onBeforeUnmount, watch } from 'vue';
+import { ref, reactive, onMounted, computed, markRaw, nextTick, onBeforeUnmount, watch, provide } from 'vue';
 import { VueFlow, useVueFlow } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
 import * as LucideIcons from 'lucide-vue-next';
@@ -651,6 +659,10 @@ const hasUnsavedChanges = ref(false);
 const clipboard = ref([]);
 const history = reactive({ past: [], future: [] });
 const loadingDiagrams = ref(false);
+
+const breakpoints = ref(new Set());
+
+
 
 // Track changes for versioning
 function markAsChanged() {
@@ -729,6 +741,8 @@ const nodeStatusSummary = computed(() => {
 
 // Initialize Services
 const simulationService = new SimulationService();
+
+provide('simulationService', simulationService);
 
 // Setup simulation service callbacks
 simulationService.onNodeStatusChange = (statuses, currentNodeId) => {
@@ -1135,15 +1149,9 @@ function removeNode(nodeId) {
 }
 
 function getNodeClass(nodeProps) {
-    console.log('Node Status:', {
-        id: nodeProps.id,
-        currentNode: simulationState.currentNodeId,
-        status: simulationState.nodeStatuses[nodeProps.id],
-        isCurrentNode: nodeProps.id === simulationState.currentNodeId
-    });
-
     const status = simulationState.nodeStatuses[nodeProps.id];
     const isCurrentNode = nodeProps.id === simulationState.currentNodeId;
+    const hasBreakpointSet = hasBreakpoint(nodeProps.id);
 
     return {
         'simulation-node': true,
@@ -1151,7 +1159,8 @@ function getNodeClass(nodeProps) {
         'processing': status === 'processing',
         'completed': status === 'completed',
         'error': status === 'error',
-        'highlight': isCurrentNode && status === 'processing'
+        'highlight': isCurrentNode && status === 'processing',
+        'has-breakpoint': hasBreakpointSet // NEW: Add breakpoint class
     };
 }
 
@@ -1553,6 +1562,7 @@ function importFlow() {
 }
 
 // Enhanced keyboard shortcuts
+// ALSO UPDATE the keyboard shortcut handler:
 function handleKeyDown(event) {
     if (event.target.tagName === 'INPUT' ||
         event.target.tagName === 'TEXTAREA' ||
@@ -1631,6 +1641,23 @@ function handleKeyDown(event) {
             }
             break;
 
+        case 'f9':
+            event.preventDefault(); // Always prevent default for F9
+            console.log('F9 pressed, selected nodes:', selectedNodes.value.length);
+
+            if (selectedNodes.value.length === 1) {
+                console.log('Toggling breakpoint for selected node:', selectedNodes.value[0].id);
+                toggleBreakpoint(selectedNodes.value[0].id);
+            } else if (selectedNodes.value.length > 1) {
+                console.log('Multiple nodes selected, toggling breakpoints for all');
+                selectedNodes.value.forEach(node => {
+                    toggleBreakpoint(node.id);
+                });
+            } else {
+                console.log('No nodes selected for F9 breakpoint toggle');
+            }
+            break;
+
         case 'escape':
             if (pauseState.isRunning) {
                 event.preventDefault();
@@ -1640,11 +1667,161 @@ function handleKeyDown(event) {
     }
 }
 
+simulationService.onBreakpointHit = (nodeId) => {
+    console.log('Breakpoint hit at node:', nodeId);
+    // Optional: Show notification or highlight the node
+};
+
+function toggleBreakpoint(nodeId) {
+    console.log('Toggling breakpoint for node:', nodeId);
+
+    const hasBreakpoint = simulationService.toggleBreakpoint(nodeId);
+    console.log('Breakpoint result:', hasBreakpoint);
+
+    if (hasBreakpoint) {
+        breakpoints.value.add(nodeId);
+    } else {
+        breakpoints.value.delete(nodeId);
+    }
+
+    // Force reactivity update
+    breakpoints.value = new Set(breakpoints.value);
+
+    console.log('Current breakpoints:', Array.from(breakpoints.value));
+
+    // Update node visual state immediately
+    nodes.value = nodes.value.map(node => ({
+        ...node,
+        class: getNodeClass({ id: node.id })
+    }));
+}
+
+
+function hasBreakpoint(nodeId) {
+    return simulationService.hasBreakpoint(nodeId);
+}
+
 function handleClickOutside(event) {
     if (!event.target.closest('.relative')) {
         showExportMenu.value = false;
     }
 }
+
+// Add to existing reactive state
+const customSelection = reactive({
+    isSelecting: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    startPosition: { x: 0, y: 0 },
+    currentPosition: { x: 0, y: 0 }
+});
+
+// Add these new functions before your existing functions:
+
+function handleContextMenu(event) {
+    // Prevent context menu when Shift is held down
+    if (event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false;
+    }
+}
+
+function startCustomSelection(event) {
+    // Only start selection on Shift+Right-click
+    if (!event.shiftKey || event.button !== 2) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    customSelection.isSelecting = true;
+    customSelection.startX = event.clientX;
+    customSelection.startY = event.clientY;
+    customSelection.currentX = event.clientX;
+    customSelection.currentY = event.clientY;
+
+    // Convert to flow coordinates
+    customSelection.startPosition = project({ x: event.clientX, y: event.clientY });
+    customSelection.currentPosition = { ...customSelection.startPosition };
+
+    document.addEventListener('mousemove', updateCustomSelection);
+    document.addEventListener('mouseup', endCustomSelection);
+}
+
+function updateCustomSelection(event) {
+    if (!customSelection.isSelecting) return;
+
+    customSelection.currentX = event.clientX;
+    customSelection.currentY = event.clientY;
+    customSelection.currentPosition = project({ x: event.clientX, y: event.clientY });
+}
+
+function endCustomSelection(event) {
+    if (!customSelection.isSelecting) return;
+
+    // Calculate selection bounds in flow coordinates
+    const minX = Math.min(customSelection.startPosition.x, customSelection.currentPosition.x);
+    const maxX = Math.max(customSelection.startPosition.x, customSelection.currentPosition.x);
+    const minY = Math.min(customSelection.startPosition.y, customSelection.currentPosition.y);
+    const maxY = Math.max(customSelection.startPosition.y, customSelection.currentPosition.y);
+
+    // Select nodes within the bounds
+    const selectedNodeIds = [];
+    nodes.value.forEach(node => {
+        const nodeX = node.position.x;
+        const nodeY = node.position.y;
+        const nodeWidth = 180; // Default node width from your CSS
+        const nodeHeight = 60; // Approximate node height
+
+        // Check if node overlaps with selection area
+        if (nodeX < maxX && nodeX + nodeWidth > minX &&
+            nodeY < maxY && nodeY + nodeHeight > minY) {
+            selectedNodeIds.push(node.id);
+        }
+    });
+
+    // Update selection
+    nodes.value = nodes.value.map(node => ({
+        ...node,
+        selected: selectedNodeIds.includes(node.id)
+    }));
+
+    selectedNodes.value = nodes.value.filter(node => selectedNodeIds.includes(node.id));
+
+    // Clean up
+    customSelection.isSelecting = false;
+    document.removeEventListener('mousemove', updateCustomSelection);
+    document.removeEventListener('mouseup', endCustomSelection);
+}
+
+function preventContextMenu(event) {
+    event.preventDefault();
+}
+
+// Add computed property for selection box style:
+const selectionBoxStyle = computed(() => {
+    if (!customSelection.isSelecting) return { display: 'none' };
+
+    const left = Math.min(customSelection.startX, customSelection.currentX);
+    const top = Math.min(customSelection.startY, customSelection.currentY);
+    const width = Math.abs(customSelection.currentX - customSelection.startX);
+    const height = Math.abs(customSelection.currentY - customSelection.startY);
+
+    return {
+        position: 'fixed',
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        border: '2px dashed #3b82f6',
+        background: 'rgba(59, 130, 246, 0.1)',
+        pointerEvents: 'none',
+        zIndex: 9999,
+        borderRadius: '4px'
+    };
+});
 
 // Load node components
 onMounted(async () => {
@@ -1682,6 +1859,12 @@ onMounted(async () => {
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('click', handleClickOutside);
         saveToHistory();
+
+        // Initialize breakpoint callback
+        simulationService.onBreakpointHit = (nodeId) => {
+            console.log('Breakpoint hit at node:', nodeId);
+            // You can add visual feedback here if needed
+        };
 
     } catch (error) {
         console.error('Failed to load components:', error);
@@ -1957,5 +2140,35 @@ input:focus,
 textarea:focus {
     outline: 2px solid #3b82f6;
     outline-offset: 2px;
+}
+
+.custom-selection-box {
+    border: 2px dashed #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+    backdrop-filter: blur(2px);
+    animation: selectionPulse 1s ease-in-out infinite;
+}
+
+@keyframes selectionPulse {
+    0%, 100% {
+        border-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+    }
+    50% {
+        border-color: #6366f1;
+        background: rgba(99, 102, 241, 0.15);
+    }
+}
+
+.vue-flow__node.has-breakpoint::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    z-index: 11;
 }
 </style>

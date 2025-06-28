@@ -77,6 +77,11 @@
                     <SettingsIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
                 </button>
 
+                <BreakpointToggle
+                    :node-id="id"
+                    variant="default"
+                />
+
                 <button @click="$emit('delete')"
                         class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-200 flex items-center justify-center group">
                     <XIcon class="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -198,15 +203,30 @@
                 <div class="space-y-2">
                     <label class="block text-xs font-medium text-gray-300">Condition</label>
                     <select v-model="data.conditionType" class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none">
-                        <option value="equals">Equals</option>
-                        <option value="notEquals">Not Equals</option>
-                        <option value="contains">Contains</option>
-                        <option value="greaterThan">Greater Than</option>
-                        <option value="lessThan">Less Than</option>
-                        <option value="isEmpty">Is Empty</option>
-                        <option value="isNotEmpty">Is Not Empty</option>
-                        <option value="inArray">In List</option>
-                        <option value="changed">Changed</option>
+                        <!-- Basic Conditions -->
+                        <optgroup label="Basic Conditions">
+                            <option value="equals">Equals (=)</option>
+                            <option value="notEquals">Not Equals (≠)</option>
+                            <option value="contains">Contains</option>
+                            <option value="isEmpty">Is Empty</option>
+                            <option value="isNotEmpty">Is Not Empty</option>
+                            <option value="inArray">In List</option>
+                            <option value="changed">Changed</option>
+                        </optgroup>
+
+                        <!-- Numeric Comparisons -->
+                        <optgroup label="Numeric Comparisons">
+                            <option value="greaterThan">Greater Than (>)</option>
+                            <option value="greaterThanOrEqual">Greater Than or Equal (>=)</option>
+                            <option value="lessThan">Less Than (<)</option>
+                            <option value="lessThanOrEqual">Less Than or Equal (<=)</option>
+                        </optgroup>
+
+                        <!-- String Pattern Conditions -->
+                        <optgroup label="Pattern Matching">
+                            <option value="stringContainsPattern">String Contains Pattern</option>
+                            <option value="multipleStringContains">Contains Multiple Patterns</option>
+                        </optgroup>
                     </select>
                 </div>
 
@@ -216,7 +236,7 @@
                     <input v-model="data.expectedValue"
                            :placeholder="getPlaceholder(data.conditionType)"
                            class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-purple-500 outline-none" />
-                    <div class="text-xs text-purple-400/70">Use {{variableName}} to reference variables</div>
+                    <div class="text-xs text-purple-400/70">{{ getConditionHelp(data.conditionType) }}</div>
                 </div>
             </div>
 
@@ -274,14 +294,20 @@
 
                             <!-- Condition -->
                             <select v-model="condition.conditionType" class="w-full text-xs bg-white/5 border border-white/10 rounded px-2 py-1 text-white focus:border-purple-500 outline-none">
-                                <option value="equals">Equals</option>
-                                <option value="notEquals">Not Equals</option>
-                                <option value="contains">Contains</option>
-                                <option value="greaterThan">Greater Than</option>
-                                <option value="lessThan">Less Than</option>
-                                <option value="isEmpty">Is Empty</option>
-                                <option value="isNotEmpty">Is Not Empty</option>
-                                <option value="inArray">In List</option>
+                                <optgroup label="Basic">
+                                    <option value="equals">Equals (=)</option>
+                                    <option value="notEquals">Not Equals (≠)</option>
+                                    <option value="contains">Contains</option>
+                                    <option value="isEmpty">Is Empty</option>
+                                    <option value="isNotEmpty">Is Not Empty</option>
+                                    <option value="inArray">In List</option>
+                                </optgroup>
+                                <optgroup label="Numeric">
+                                    <option value="greaterThan">Greater Than (>)</option>
+                                    <option value="greaterThanOrEqual">Greater Than or Equal (>=)</option>
+                                    <option value="lessThan">Less Than (<)</option>
+                                    <option value="lessThanOrEqual">Less Than or Equal (<=)</option>
+                                </optgroup>
                             </select>
 
                             <!-- Expected Value -->
@@ -335,8 +361,9 @@
 import { ref, nextTick } from 'vue'
 import { Handle } from "@vue-flow/core"
 import { XIcon, ScanEye, SearchIcon, MessageSquareIcon, SettingsIcon } from "lucide-vue-next"
+import BreakpointToggle from '../nodeComponents/BreakpointToggle.vue'
 
-const props = defineProps(["data", "variables"])
+const props = defineProps(["data", "variables", "id"])
 defineEmits(["delete"])
 
 // UI State
@@ -409,10 +436,28 @@ function getPlaceholder(type) {
         equals: 'active',
         contains: 'text to find',
         greaterThan: '100',
+        greaterThanOrEqual: '100',
         lessThan: '50',
-        inArray: 'value1,value2,value3'
+        lessThanOrEqual: '50',
+        inArray: 'value1,value2,value3',
+        stringContainsPattern: 'pattern to search',
+        multipleStringContains: 'pattern1|pattern2|pattern3'
     }
     return placeholders[type] || 'value'
+}
+
+function getConditionHelp(type) {
+    const help = {
+        greaterThan: 'Value must be strictly greater than the specified number',
+        greaterThanOrEqual: 'Value must be greater than or equal to the specified number',
+        lessThan: 'Value must be strictly less than the specified number',
+        lessThanOrEqual: 'Value must be less than or equal to the specified number',
+        stringContainsPattern: 'Case-insensitive pattern search (e.g., C:H/I:H/A:H)',
+        multipleStringContains: 'All patterns must be present. Separate with | (e.g., AV:N|PR:N|C:H)',
+        inArray: 'Comma-separated values',
+        default: 'Use {{variableName}} to reference variables'
+    }
+    return help[type] || help.default
 }
 
 function getPreview() {
@@ -427,7 +472,19 @@ function getPreview() {
             return `${variable} ${condition}`
         }
 
-        return `${variable} ${condition} ${expected}`
+        // Show symbolic representation for numeric comparisons
+        const symbols = {
+            equals: '==',
+            notEquals: '!=',
+            greaterThan: '>',
+            greaterThanOrEqual: '>=',
+            lessThan: '<',
+            lessThanOrEqual: '<=',
+            contains: 'contains'
+        }
+
+        const symbol = symbols[condition] || condition
+        return `${variable} ${symbol} ${expected}`
     } else {
         if (props.data.conditions.length === 0) return ''
 
@@ -440,7 +497,18 @@ function getPreview() {
                 return `(${variable} ${condition})`
             }
 
-            return `(${variable} ${condition} ${expected})`
+            const symbols = {
+                equals: '==',
+                notEquals: '!=',
+                greaterThan: '>',
+                greaterThanOrEqual: '>=',
+                lessThan: '<',
+                lessThanOrEqual: '<=',
+                contains: 'contains'
+            }
+
+            const symbol = symbols[condition] || condition
+            return `(${variable} ${symbol} ${expected})`
         })
 
         return previews.join(` ${props.data.logicalOperator} `)
