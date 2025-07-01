@@ -2,11 +2,14 @@
 
 namespace Mariojgt\Witchcraft\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FlowDiagram extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'description',

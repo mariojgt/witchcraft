@@ -385,6 +385,7 @@
                     <SimulationLogs v-if="showLogs"
                                    :logs="simulationLogs"
                                    :simulation-mode="simulationState.isRunning"
+                                   :variables="simulationState.variables"
                                    @clear="clearLogs" />
 
                     <!-- Node Components -->

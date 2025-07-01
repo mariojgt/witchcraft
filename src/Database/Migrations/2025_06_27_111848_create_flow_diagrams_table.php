@@ -24,6 +24,7 @@ return new class extends Migration
             $table->boolean('is_latest_version')->default(true);
             $table->text('version_notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
