@@ -13,9 +13,25 @@
         <div class="border-b border-gray-800/50">
           <div class="flex items-center justify-between px-6 py-4">
             <div class="flex items-center gap-3">
-              <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" v-if="simulationMode"></div>
-              <div class="w-2 h-2 rounded-full bg-gray-600" v-else></div>
-              <h3 class="text-sm font-medium text-gray-100">Simulation Monitor</h3>
+              <!-- Enhanced status indicator -->
+              <div class="relative">
+                <div class="w-2 h-2 rounded-full" :class="simulationMode ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'"></div>
+                <div v-if="simulationMode" class="absolute inset-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping opacity-75"></div>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-gray-100">Simulation Monitor</h3>
+                <div class="flex items-center gap-3 mt-0.5">
+                  <span class="text-xs text-gray-500">
+                    {{ simulationMode ? 'Running' : 'Idle' }}
+                  </span>
+                  <span v-if="logs.length > 0" class="text-xs text-gray-500">
+                    {{ logs.length }} logs
+                  </span>
+                  <span v-if="variableCount > 0" class="text-xs text-gray-500">
+                    {{ variableCount }} variables
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div class="flex items-center gap-1">
@@ -36,7 +52,7 @@
             </div>
           </div>
 
-          <!-- Tab Navigation -->
+          <!-- Tab Navigation with Enhanced Info -->
           <div class="flex border-b border-gray-800/30">
             <button
               @click="activeTab = 'logs'"
@@ -48,8 +64,13 @@
             >
               <TerminalIcon class="w-4 h-4 inline mr-2" />
               Logs
-              <span v-if="logs.length > 0" class="ml-2 text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded-full">
+              <span v-if="logs.length > 0" class="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                    :class="activeTab === 'logs' ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-700 text-gray-300'">
                 {{ logs.length }}
+              </span>
+              <!-- Error count indicator -->
+              <span v-if="logStats.error > 0" class="ml-1 text-xs bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded-full">
+                {{ logStats.error }} errors
               </span>
               <div v-if="activeTab === 'logs'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></div>
             </button>
@@ -64,7 +85,8 @@
             >
               <DatabaseIcon class="w-4 h-4 inline mr-2" />
               Variables
-              <span v-if="variableCount > 0" class="ml-2 text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded-full">
+              <span v-if="variableCount > 0" class="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                    :class="activeTab === 'variables' ? 'bg-purple-500/20 text-purple-300' : 'bg-gray-700 text-gray-300'">
                 {{ variableCount }}
               </span>
               <div v-if="activeTab === 'variables'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400"></div>
@@ -76,39 +98,85 @@
         <div class="max-h-80 overflow-y-auto">
 
           <!-- Logs Tab -->
-          <div v-if="activeTab === 'logs'" class="p-1">
-            <TransitionGroup
-              enter-active-class="transition-all duration-200 ease-out"
-              enter-from-class="opacity-0 translate-x-4"
-              enter-to-class="opacity-100 translate-x-0"
-              leave-active-class="transition-all duration-150 ease-in"
-              leave-from-class="opacity-100"
-              leave-to-class="opacity-0 scale-95"
-            >
-              <div
-                v-for="(log, index) in logs"
-                :key="index"
-                class="mx-2 mb-1 rounded-lg transition-all duration-150"
-                :class="getLogClass(log.type)"
-              >
-                <div class="flex items-start gap-3 px-4 py-3">
-                  <div class="flex-shrink-0 mt-0.5">
-                    <div
-                      class="w-1.5 h-1.5 rounded-full"
-                      :class="getLogDotClass(log.type)"
-                    ></div>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm leading-relaxed" :class="getLogTextClass(log.type)">
-                      {{ log.message }}
-                    </p>
-                    <span class="text-xs text-gray-500 mt-1 block">
-                      {{ formatTime(log.timestamp) }}
-                    </span>
-                  </div>
+          <!-- Logs Tab -->
+          <div v-if="activeTab === 'logs'" class="p-4">
+            <!-- Log Statistics Bar -->
+            <div v-if="logs.length > 0" class="mb-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700/30">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Log Summary</span>
+                <span class="text-xs text-gray-500">{{ logs.length }} total entries</span>
+              </div>
+              <div class="flex gap-3 text-xs">
+                <div v-if="logStats.info" class="flex items-center gap-1.5">
+                  <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span class="text-gray-300">{{ logStats.info }} info</span>
+                </div>
+                <div v-if="logStats.success" class="flex items-center gap-1.5">
+                  <div class="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                  <span class="text-gray-300">{{ logStats.success }} success</span>
+                </div>
+                <div v-if="logStats.warning" class="flex items-center gap-1.5">
+                  <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
+                  <span class="text-gray-300">{{ logStats.warning }} warnings</span>
+                </div>
+                <div v-if="logStats.error" class="flex items-center gap-1.5">
+                  <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                  <span class="text-gray-300">{{ logStats.error }} errors</span>
                 </div>
               </div>
-            </TransitionGroup>
+            </div>
+
+            <!-- Log Entries with Enhanced Formatting -->
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+              <TransitionGroup
+                enter-active-class="transition-all duration-200 ease-out"
+                enter-from-class="opacity-0 translate-y-2"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition-all duration-150 ease-in"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-1"
+              >
+                <div
+                  v-for="(log, index) in logs"
+                  :key="`${log.timestamp}-${index}`"
+                  class="group bg-gray-800/20 hover:bg-gray-800/40 border border-gray-700/20 hover:border-gray-600/30 rounded-lg p-3 transition-all duration-200"
+                  :class="getLogClass(log.type)"
+                >
+                  <div class="flex items-start gap-3">
+                    <div class="flex flex-col items-center mt-1">
+                      <div class="w-2 h-2 rounded-full flex-shrink-0" :class="getLogDotClass(log.type)"></div>
+                      <div class="w-px bg-gray-700/30 h-4 mt-1" v-if="index < logs.length - 1"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <!-- Enhanced log message with better formatting -->
+                      <div class="flex items-start justify-between gap-2 mb-1">
+                        <p class="text-sm leading-relaxed font-medium" :class="getLogTextClass(log.type)">
+                          {{ formatLogMessage(log.message) }}
+                        </p>
+                        <span class="text-xs text-gray-500 font-mono flex-shrink-0">
+                          {{ formatTime(log.timestamp) }}
+                        </span>
+                      </div>
+
+                      <!-- Log type badge -->
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                          :class="getLogBadgeClass(log.type)"
+                        >
+                          {{ log.type.toUpperCase() }}
+                        </span>
+
+                        <!-- Node info if available -->
+                        <span v-if="log.nodeId" class="text-xs text-gray-500">
+                          Node: {{ log.nodeId }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TransitionGroup>
+            </div>
 
             <!-- Empty State for Logs -->
             <div v-if="logs.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
@@ -120,17 +188,31 @@
             </div>
           </div>
 
-          <!-- Variables Tab -->
+          <!-- Variables Tab with Enhanced Search -->
           <div v-if="activeTab === 'variables'" class="p-4">
             <div class="space-y-3">
-              <!-- Variable Search -->
-              <div class="relative" v-if="variableCount > 3">
-                <SearchIcon class="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
-                <input
-                  v-model="variableSearch"
-                  placeholder="Search variables (e.g., product_select.uuid)..."
-                  class="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-300 placeholder-gray-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 focus:outline-none transition-all"
-                />
+              <!-- Enhanced Variable Search -->
+              <div v-if="variableCount > 3" class="space-y-2">
+                <div class="relative">
+                  <SearchIcon class="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                  <input
+                    v-model="variableSearch"
+                    placeholder="Search variables (e.g., user.name, product_id)..."
+                    class="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-300 placeholder-gray-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 focus:outline-none transition-all"
+                  />
+                </div>
+                <!-- Search results info -->
+                <div v-if="variableSearch" class="flex items-center justify-between text-xs">
+                  <span class="text-gray-500">
+                    {{ filteredVariablesList.length }} of {{ flattenedVariables.length }} variables
+                  </span>
+                  <button
+                    @click="variableSearch = ''"
+                    class="text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    Clear search
+                  </button>
+                </div>
               </div>
 
               <!-- Variables List -->
@@ -188,10 +270,28 @@
                       </div>
                     </div>
 
-                    <!-- Variable Value Preview -->
+                    <!-- Variable Value Preview with Enhanced Formatting -->
                     <div class="mt-2">
-                      <div class="text-xs text-gray-400 truncate">
-                        {{ formatValuePreview(variable.value) }}
+                      <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                          <div class="text-xs font-mono leading-relaxed" :class="getValueTextClass(variable.value)">
+                            {{ formatValuePreview(variable.value) }}
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 ml-2">
+                          <!-- Value size indicator -->
+                          <span v-if="getValueSize(variable.value) > 0" class="text-xs text-gray-500">
+                            {{ getValueSize(variable.value) }}
+                          </span>
+                          <!-- Copy value button -->
+                          <button
+                            @click.stop="copyVariableValue(variable.value)"
+                            class="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded hover:bg-gray-700/50 transition-all"
+                            title="Copy value"
+                          >
+                            <CopyIcon class="w-3 h-3 text-gray-400 hover:text-gray-300" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -570,13 +670,47 @@ function formatValuePreview(value) {
   if (typeof value === 'string') {
     return value.length > 50 ? `"${value.substring(0, 50)}..."` : `"${value}"`
   }
-  if (typeof value === 'object') {
-    if (Array.isArray(value)) {
-      return `[${value.length} items]`
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]'
+    if (value.length <= 3) {
+      return `[${value.map(v => typeof v === 'string' ? `"${v}"` : String(v)).join(', ')}]`
     }
-    return `{${Object.keys(value).length} keys}`
+    return `[${value.length} items: ${value.slice(0, 2).map(v => typeof v === 'string' ? `"${v}"` : String(v)).join(', ')}, ...]`
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value)
+    if (keys.length === 0) return '{}'
+    if (keys.length <= 2) {
+      return `{${keys.map(k => `${k}: ${typeof value[k] === 'string' ? `"${value[k]}"` : String(value[k])}`).join(', ')}}`
+    }
+    return `{${keys.length} keys: ${keys.slice(0, 2).join(', ')}, ...}`
   }
   return String(value)
+}
+
+// Enhanced: Get appropriate text color for different value types
+function getValueTextClass(value) {
+  if (value === null || value === undefined) return 'text-gray-500 italic'
+  if (typeof value === 'string') return 'text-green-300'
+  if (typeof value === 'number') return 'text-blue-300'
+  if (typeof value === 'boolean') return 'text-yellow-300'
+  if (Array.isArray(value)) return 'text-purple-300'
+  if (typeof value === 'object') return 'text-orange-300'
+  return 'text-gray-300'
+}
+
+// Enhanced: Get value size indicator
+function getValueSize(value) {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string') return value.length > 100 ? `${value.length} chars` : ''
+  if (Array.isArray(value)) return value.length > 5 ? `${value.length} items` : ''
+  if (typeof value === 'object') {
+    const keys = Object.keys(value)
+    return keys.length > 3 ? `${keys.length} keys` : ''
+  }
+  return ''
 }
 
 function formatVariableValue(value) {
@@ -625,6 +759,28 @@ function getLogTextClass(type) {
     info: 'text-blue-200'
   }
   return classes[type] || 'text-gray-300'
+}
+
+// Enhanced: Log message formatting
+function formatLogMessage(message) {
+  if (!message) return ''
+
+  // Clean up common prefixes and make more readable
+  return message
+    .replace(/^(Processing node:|Node completed:|Node failed:)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Enhanced: Log badge styling
+function getLogBadgeClass(type) {
+  const classes = {
+    error: 'bg-red-500/20 text-red-300 border border-red-500/30',
+    success: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+    warning: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+    info: 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+  }
+  return classes[type] || classes.info
 }
 </script>
 

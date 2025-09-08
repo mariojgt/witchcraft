@@ -147,6 +147,69 @@
                         </div>
                     </div>
 
+                    <!-- NEW: Variables Section -->
+                    <div v-if="availableVariables.length > 0" class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs text-gray-400 uppercase tracking-wider font-medium">Variables</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded-full">{{ availableVariables.length }}</span>
+                                <button
+                                    @click="toggleVariablesSection"
+                                    class="text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <ChevronDownIcon
+                                        :class="`w-3 h-3 transition-transform ${showVariablesSection ? 'rotate-180' : ''}`"
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
+                        <Transition
+                            enter-active-class="transition-all duration-200 ease-out"
+                            enter-from-class="opacity-0 max-h-0"
+                            enter-to-class="opacity-100 max-h-96"
+                            leave-active-class="transition-all duration-150 ease-in"
+                            leave-from-class="opacity-100 max-h-96"
+                            leave-to-class="opacity-0 max-h-0"
+                        >
+                            <div v-if="showVariablesSection" class="space-y-1 max-h-64 overflow-y-auto custom-scrollbar">
+                                <div
+                                    v-for="variable in availableVariables"
+                                    :key="variable.id"
+                                    draggable="true"
+                                    @dragstart="onVariableDragStart($event, variable)"
+                                    class="group flex items-center gap-3 p-3 rounded-lg cursor-move hover:bg-[#1a1a1a] border border-transparent hover:border-purple-500/30 transition-all bg-gradient-to-r from-purple-500/5 to-transparent"
+                                    :title="`Drag to create Get Variable node for: ${variable.name}`"
+                                >
+                                    <!-- Variable Icon -->
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 border border-purple-500/30 group-hover:bg-purple-500/30 transition-colors flex-shrink-0">
+                                        <DownloadIcon class="w-4 h-4 text-purple-400 group-hover:text-purple-300" />
+                                    </div>
+
+                                    <!-- Variable Info -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <code class="text-sm font-medium text-purple-300 truncate">{{ variable.name }}</code>
+                                            <span class="text-xs text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded-full">var</span>
+                                        </div>
+                                        <div class="text-xs text-gray-400 truncate mt-0.5">{{ variable.description }}</div>
+                                        <div class="text-xs text-gray-500 truncate">From: {{ variable.nodeTitle }}</div>
+                                    </div>
+
+                                    <!-- Drag indicator -->
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <MoveIcon class="w-4 h-4 text-gray-500" />
+                                    </div>
+                                </div>
+
+                                <!-- Helper text -->
+                                <div class="text-xs text-gray-500 text-center py-2 border-t border-gray-700/30 mt-2">
+                                    💡 Drag variables to canvas to create Get Variable nodes
+                                </div>
+                            </div>
+                        </Transition>
+                    </div>
+
                     <!-- Node Categories -->
                     <div class="space-y-2">
                         <h4 class="text-xs text-gray-400 uppercase tracking-wider font-medium">Available Nodes</h4>
@@ -270,6 +333,10 @@ const props = defineProps({
     speed: {
         type: Number,
         default: 1000
+    },
+    nodes: {
+        type: Array,
+        default: () => []
     }
 })
 
@@ -291,6 +358,7 @@ const collapsed = ref(false)
 const nodeTypes = reactive([])
 const expandedCategories = reactive({})
 const searchQuery = ref('')
+const showVariablesSection = ref(true)
 
 // Action Button Component
 const ActionButton = {
@@ -439,6 +507,27 @@ const filteredNodes = computed(() => {
     }, {})
 })
 
+// NEW: Extract variables from SetVariableNode instances
+const availableVariables = computed(() => {
+    if (!props.nodes) return []
+
+    return props.nodes
+        .filter(node => node.type === 'setvariablenode' || node.type === 'set-variable')
+        .map(node => ({
+            id: node.id,
+            name: node.data?.variableName || 'unnamed',
+            displayName: node.data?.customTitle || node.data?.variableName || 'Unnamed Variable',
+            description: node.data?.customDescription || `Variable: ${node.data?.variableName || 'unnamed'}`,
+            nodeTitle: node.data?.customTitle || 'Set Variable',
+            nodeId: node.id,
+            type: 'variable',
+            icon: 'VariableIcon',
+            value: node.data?.value || node.data?.defaultValue || ''
+        }))
+        .filter(variable => variable.name && variable.name.trim() !== '' && variable.name !== 'unnamed')
+        .sort((a, b) => a.name.localeCompare(b.name))
+})
+
 // Functions (keeping original functionality)
 function toggleCategory(categoryName) {
     expandedCategories[categoryName] = !expandedCategories[categoryName]
@@ -458,6 +547,40 @@ function onDragStart(event, type) {
             event.target.style.opacity = '1'
         }
     }, 100)
+}
+
+// NEW: Handle variable drag start - creates GetVariableNode with selected variable
+function onVariableDragStart(event, variable) {
+    const getVariableNodeData = {
+        type: 'getvariablenode',
+        initialData: {
+            variableName: variable.name,
+            outputVariable: `${variable.name}_retrieved`,
+            defaultValue: '',
+            fromCache: false,
+            failIfNotFound: false,
+            customTitle: `Get ${variable.displayName}`,
+            customDescription: `Retrieve ${variable.name} variable`,
+            comment: `Getting variable from: ${variable.nodeTitle}`,
+            colorTheme: "yellow"
+        }
+    }
+
+    event.dataTransfer.setData('application/nodeType', JSON.stringify(getVariableNodeData))
+    event.dataTransfer.effectAllowed = 'copy'
+
+    // Visual feedback
+    event.target.style.opacity = '0.6'
+    setTimeout(() => {
+        if (event.target) {
+            event.target.style.opacity = '1'
+        }
+    }, 100)
+}
+
+// NEW: Toggle variables section visibility
+function toggleVariablesSection() {
+    showVariablesSection.value = !showVariablesSection.value
 }
 </script>
 

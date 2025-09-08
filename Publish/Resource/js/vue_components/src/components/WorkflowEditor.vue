@@ -1,7 +1,8 @@
 <template>
     <div class="h-screen bg-[#0a0a0a] relative flex">
         <!-- Professional Sidebar with Node Library -->
-        <div class="w-72 bg-[#111] border-r border-gray-800 flex flex-col">
+        <div class="bg-[#111] border-r border-gray-800 flex flex-col relative"
+             :style="{ width: sidebarWidth + 'px' }">
             <!-- Header -->
             <div class="p-4 border-b border-gray-800">
                 <div class="flex items-center gap-3 mb-4">
@@ -110,6 +111,88 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- NEW: Variables Section -->
+                <div v-if="availableVariables.length > 0 || variableSearchQuery.trim()" class="mt-6 pt-4 border-t border-gray-800">
+                    <div class="text-xs text-gray-400 uppercase tracking-wide font-medium mb-3">
+                        Variables ({{ availableVariables.length }})
+                        <span v-if="variableSearchQuery.trim() && availableVariables.length > 0" class="text-purple-400"> - filtered</span>
+                    </div>
+
+                    <!-- Variable Search -->
+                    <div class="relative mb-3">
+                        <input
+                            v-model="variableSearchQuery"
+                            type="text"
+                            placeholder="Search variables..."
+                            class="w-full bg-[#1a1a1a] border border-gray-700 rounded-lg px-3 py-2 pl-9 text-white text-sm placeholder-gray-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none transition-all"
+                        />
+                        <SearchIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <!-- Clear button -->
+                        <button
+                            v-if="variableSearchQuery"
+                            @click="variableSearchQuery = ''"
+                            class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded hover:bg-gray-600 transition-colors"
+                        >
+                            <XIcon class="w-3 h-3 text-gray-400 hover:text-white" />
+                        </button>
+                    </div>
+
+                    <div class="space-y-1 max-h-64 overflow-y-auto">
+                        <div
+                            v-for="variable in availableVariables"
+                            :key="variable.id"
+                            draggable="true"
+                            @dragstart="onVariableDragStart($event, variable)"
+                            class="group flex items-center gap-3 p-3 rounded-lg cursor-move hover:bg-[#1a1a1a] border border-transparent hover:border-purple-500/30 transition-all bg-gradient-to-r from-purple-500/5 to-transparent"
+                            :title="`Drag to create Get Variable node for: ${variable.name}`"
+                        >
+                            <!-- Variable Icon -->
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/20 border border-purple-500/30 group-hover:bg-purple-500/30 transition-colors">
+                                <DownloadIcon class="w-4 h-4 text-purple-400 group-hover:text-purple-300" />
+                            </div>
+
+                            <!-- Variable Info -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <code class="text-sm font-medium text-purple-300 truncate">{{ variable.name }}</code>
+                                    <span class="text-xs text-gray-500 bg-gray-700/50 px-1.5 py-0.5 rounded-full">var</span>
+                                </div>
+                                <div class="text-xs text-gray-400 truncate">{{ variable.description }}</div>
+                                <div class="text-xs text-gray-500 truncate">From: {{ variable.nodeTitle }}</div>
+                            </div>
+
+                            <!-- Drag indicator -->
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <PlusIcon class="w-4 h-4 text-gray-400" />
+                            </div>
+                        </div>
+
+                        <!-- Empty state for search with no results -->
+                        <div v-if="availableVariables.length === 0 && variableSearchQuery.trim() !== ''"
+                             class="text-center py-8 text-gray-500">
+                            <SearchIcon class="w-8 h-8 mx-auto mb-2 text-gray-600" />
+                            <div class="text-sm">No variables found</div>
+                            <div class="text-xs text-gray-600 mt-1">Try a different search term</div>
+                        </div>
+
+                        <!-- Helper text -->
+                        <div v-if="availableVariables.length > 0" class="text-xs text-gray-500 text-center py-2 border-t border-gray-700/30 mt-2">
+                            💡 Drag variables to canvas to create Get Variable nodes
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DEBUG: Show debug info (remove this later) -->
+                <div class="mt-6 pt-4 border-t border-gray-800">
+                    <div class="text-xs text-gray-400 uppercase tracking-wide font-medium mb-3">Debug Info</div>
+                    <div class="text-xs text-gray-500 space-y-1">
+                        <div>Total nodes: {{ nodes.length }}</div>
+                        <div>Available variables: {{ availableVariables.length }}</div>
+                        <div>Node types: {{ nodes.map(n => n.type).join(', ') }}</div>
+                        <div>Available components: {{ Object.keys(nodeComponents).join(', ') }}</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Bottom Actions -->
@@ -138,10 +221,20 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Resize Handle -->
+            <div
+                @mousedown="startResize"
+                class="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors bg-transparent group"
+                :class="{ 'bg-blue-500': isResizing }"
+            >
+                <div class="absolute inset-y-0 -right-1 -left-1 w-3"></div>
+            </div>
         </div>
 
         <!-- Main Canvas Area -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex flex-col"
+             :style="{ width: `calc(100vw - ${sidebarWidth}px)` }">
             <!-- Top Toolbar -->
             <div class="h-14 bg-[#111] border-b border-gray-800 flex items-center justify-between px-4">
                 <!-- Left Actions -->
@@ -334,37 +427,38 @@
             </div>
 
             <!-- Canvas -->
-            <div class="flex-1 relative">
+            <div class="flex-1 relative" @contextmenu.prevent>
                 <VueFlow
                     v-model:nodes="nodes"
                     v-model:edges="edges"
-                    :class="{ 'simulation-mode': simulationState.isRunning }"
+            :class="{ 'simulation-mode': simulationState.isRunning, 'panning-right': isRightPanning }"
                     @connect="onConnect"
                     @node-click="onNodeClick"
                     @edge-click="onEdgeClick"
                     @node-double-click="onNodeDoubleClick"
                     @selection-change="onSelectionChange"
+                    @node-drag-stop="onNodeDragStop"
+                    @edges-change="onEdgesChange"
+                    @nodes-change="onNodesChange"
                     @dragover.prevent
                     @drop="onDrop"
                     @pane-click="onPaneClick"
-                    @mousedown="startCustomSelection"
-                    @contextmenu="handleContextMenu"
+
                     class="workflow-canvas"
                     :default-viewport="{ zoom: 0.8 }"
                     :min-zoom="0.1"
                     :max-zoom="2"
-                    :selection-key-code="null"
+                    :pan-on-drag="false"
+                    :select-nodes-on-drag="true"
+                    :selection-on-drag="true"
+                    :elements-selectable="true"
+                    :nodes-draggable="true"
+                    :selection-key-code="'Shift'"
                     :multi-selection-key-code="['Meta', 'Control', 'Shift']"
                     :delete-key-code="['Delete', 'Backspace']"
                     :snap-to-grid="snapToGrid"
                     :snap-grid="[20, 20]"
                 >
-                    <!-- Add this selection box overlay inside VueFlow, after the Background components -->
-                    <div
-                        v-if="customSelection.isSelecting"
-                        :style="selectionBoxStyle"
-                        class="custom-selection-box"
-                    ></div>
                     <!-- Enhanced Grid Background -->
                     <Background
                         variant="dots"
@@ -640,7 +734,7 @@ const selectedNodes = ref([]);
 const selectedEdges = ref([]);
 const nodeComponents = reactive({});
 const snapToGrid = ref(true);
-const { addEdges, removeNodes, addNodes, removeEdges, project, fitView, toObject } = useVueFlow();
+const { addEdges, removeNodes, addNodes, removeEdges, project, fitView, toObject, setViewport } = useVueFlow();
 
 // UI state
 const showSaveDialog = ref(false);
@@ -652,9 +746,24 @@ const savedDiagrams = ref([]);
 const currentDiagramId = ref(null);
 const currentDiagramData = ref({});
 const searchQuery = ref('');
+const variableSearchQuery = ref('');
 const searchInput = ref(null);
 const availableIcons = ref({});
 const hasUnsavedChanges = ref(false);
+
+// Sidebar resizing functionality
+const sidebarWidth = ref(288); // 18rem = 288px default (w-72)
+const isResizing = ref(false);
+const minSidebarWidth = 200;
+const maxSidebarWidth = 600;
+
+// Computed properties for responsive design
+const sidebarClasses = computed(() => ({
+    'text-sm': sidebarWidth.value < 250,
+    'text-base': sidebarWidth.value >= 250
+}));
+
+const isCompactSidebar = computed(() => sidebarWidth.value < 250);
 
 // Enhanced features state
 const clipboard = ref([]);
@@ -663,7 +772,73 @@ const loadingDiagrams = ref(false);
 
 const breakpoints = ref(new Set());
 
+// Guard to avoid saving history while applying undo/redo
+const isApplyingHistory = ref(false);
 
+// Unreal-style right-button panning state
+const isRightPanning = ref(false);
+const panStart = ref({ x: 0, y: 0 });
+const panViewportStart = ref({ x: 0, y: 0, zoom: 1 });
+
+// Sidebar resize functionality
+function startResize(event) {
+    isResizing.value = true;
+    event.preventDefault();
+    document.addEventListener('mousemove', handleResize);
+    document.addEventListener('mouseup', stopResize);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+}
+
+function handleResize(event) {
+    if (!isResizing.value) return;
+
+    const newWidth = Math.max(minSidebarWidth, Math.min(maxSidebarWidth, event.clientX));
+    sidebarWidth.value = newWidth;
+    // Save to localStorage
+    localStorage.setItem('workflowEditor.sidebarWidth', newWidth.toString());
+}
+
+function stopResize() {
+    isResizing.value = false;
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', stopResize);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+}
+
+// Right-mouse drag panning (Unreal-style)
+function onRootMouseDown(e) {
+    // Only respond to right mouse button
+    if (e.button !== 2) return;
+    // If Shift is held, let custom selection handle it
+    if (e.shiftKey) return;
+    // Ignore if a modal/overlay might be active or default prevented elsewhere
+    // Start panning
+    e.preventDefault();
+    const { viewport } = toObject();
+    panViewportStart.value = { ...viewport };
+    panStart.value = { x: e.clientX, y: e.clientY };
+    isRightPanning.value = true;
+    window.addEventListener('mousemove', onRootMouseMove);
+    window.addEventListener('mouseup', onRootMouseUp, { once: true });
+}
+
+function onRootMouseMove(e) {
+    if (!isRightPanning.value) return;
+    const dx = e.clientX - panStart.value.x;
+    const dy = e.clientY - panStart.value.y;
+    setViewport({
+        x: panViewportStart.value.x + dx,
+        y: panViewportStart.value.y + dy,
+        zoom: panViewportStart.value.zoom
+    });
+}
+
+function onRootMouseUp() {
+    isRightPanning.value = false;
+    window.removeEventListener('mousemove', onRootMouseMove);
+}
 
 // Track changes for versioning
 function markAsChanged() {
@@ -812,6 +987,69 @@ function groupByCategory(nodes) {
     }, {});
 }
 
+// NEW: Extract variables from SetVariableNode instances
+const availableVariables = computed(() => {
+    console.log('Available Variables Debug:');
+    console.log('Total nodes:', nodes.value.length);
+    console.log('All node types:', nodes.value.map(n => ({ id: n.id, type: n.type, data: n.data })));
+
+    const filtered = nodes.value.filter(node => {
+        const isSetVariable = node.type === 'setvariablenode' ||
+                             node.type === 'set-variable' ||
+                             node.type === 'SetVariableNode' ||
+                             node.type?.toLowerCase().includes('setvariable') ||
+                             node.type?.toLowerCase().includes('variable');
+        console.log(`Node ${node.id}: type="${node.type}", isSetVariable=${isSetVariable}`);
+        return isSetVariable;
+    });
+
+    console.log('Filtered SetVariable nodes:', filtered.length);
+
+    const mapped = filtered.map(node => ({
+        id: node.id,
+        name: node.data?.variableName || 'unnamed',
+        displayName: node.data?.customTitle || node.data?.variableName || 'Unnamed Variable',
+        description: node.data?.customDescription || `Variable: ${node.data?.variableName || 'unnamed'}`,
+        nodeTitle: node.data?.customTitle || 'Set Variable',
+        nodeId: node.id,
+        type: 'variable',
+        icon: 'VariableIcon',
+        value: node.data?.value || node.data?.defaultValue || ''
+    }));
+
+    console.log('Mapped variables:', mapped);
+
+    // Remove duplicates by variable name - keep the most recent (last) occurrence
+    const uniqueVariables = mapped.reduce((acc, current) => {
+        const existingIndex = acc.findIndex(item => item.name === current.name);
+        if (existingIndex !== -1) {
+            // Replace existing with current (keep most recent)
+            acc[existingIndex] = current;
+        } else {
+            acc.push(current);
+        }
+        return acc;
+    }, []);
+
+    console.log('Unique variables after deduplication:', uniqueVariables);
+
+    const finalFiltered = uniqueVariables.filter(variable => variable.name && variable.name.trim() !== '' && variable.name !== 'unnamed');
+    console.log('Final filtered variables:', finalFiltered);
+
+    // Apply search filter if there's a search query
+    const searchFiltered = variableSearchQuery.value.trim() === ''
+        ? finalFiltered
+        : finalFiltered.filter(variable => {
+            const query = variableSearchQuery.value.toLowerCase();
+            return variable.name.toLowerCase().includes(query) ||
+                   variable.displayName.toLowerCase().includes(query) ||
+                   variable.description.toLowerCase().includes(query) ||
+                   (variable.value && String(variable.value).toLowerCase().includes(query));
+        });
+
+    return searchFiltered.sort((a, b) => a.name.localeCompare(b.name));
+})
+
 function formatValue(value) {
     if (typeof value === 'object') {
         return JSON.stringify(value, null, 2).substring(0, 50) + '...';
@@ -901,6 +1139,8 @@ function formatVariableValue(value) {
 
 // History management
 function saveToHistory() {
+    if (isApplyingHistory.value) return;
+
     history.past.push({
         nodes: JSON.parse(JSON.stringify(nodes.value)),
         edges: JSON.parse(JSON.stringify(edges.value))
@@ -914,34 +1154,61 @@ function saveToHistory() {
 
 function undo() {
     if (!canUndo.value) return;
-
+    isApplyingHistory.value = true;
     const current = { nodes: nodes.value, edges: edges.value };
     history.future.unshift(current);
 
     const previous = history.past.pop();
     nodes.value = previous.nodes;
     edges.value = previous.edges;
+    isApplyingHistory.value = false;
 }
 
 function redo() {
     if (!canRedo.value) return;
-
+    isApplyingHistory.value = true;
     const current = { nodes: nodes.value, edges: edges.value };
     history.past.push(current);
 
     const next = history.future.shift();
     nodes.value = next.nodes;
     edges.value = next.edges;
+    isApplyingHistory.value = false;
+}
+
+// Push changes to history when dragging ends or graph changes
+function onNodeDragStop() {
+    saveToHistory();
+}
+
+function onEdgesChange(changes) {
+    if (isApplyingHistory.value) return;
+    // Only record meaningful changes (add/remove); ignore selection highlight changes
+    if (Array.isArray(changes) && changes.some(c => c.type === 'add' || c.type === 'remove' || c.type === 'reset')) {
+        saveToHistory();
+    }
+}
+
+function onNodesChange(changes) {
+    if (isApplyingHistory.value) return;
+    if (!Array.isArray(changes)) return;
+    // Record only add/remove here; position is handled on drag stop, selection/dimensions are ignored
+    if (changes.some(c => c.type === 'add' || c.type === 'remove')) {
+        saveToHistory();
+    }
 }
 
 // Enhanced selection management
 function onSelectionChange({ nodes: selectedNodeItems, edges: selectedEdgeItems }) {
-    selectedNodes.value = selectedNodeItems || [];
-    selectedEdges.value = selectedEdgeItems || [];
+    const selNodes = selectedNodeItems || [];
+    const selEdges = selectedEdgeItems || [];
+
+    selectedNodes.value = selNodes;
+    selectedEdges.value = selEdges;
 
     nodes.value = nodes.value.map(node => ({
         ...node,
-        selected: selectedNodeItems.some(selectedNode => selectedNode.id === node.id)
+        selected: selNodes.some(selectedNode => selectedNode.id === node.id)
     }));
 
     console.log('Selection changed:', selectedNodes.value.length, 'nodes selected');
@@ -1049,6 +1316,28 @@ function onNodeDragStart(event, nodeType) {
     event.dataTransfer.effectAllowed = 'copy';
 }
 
+// NEW: Handle variable drag start - creates GetVariableNode with selected variable
+function onVariableDragStart(event, variable) {
+    const getVariableNodeData = {
+        type: 'getvariable', // Fixed: should be 'getvariable' not 'getvariablenode'
+        initialData: {
+            variableName: variable.name,
+            outputVariable: `${variable.name}_retrieved`,
+            defaultValue: '',
+            fromCache: false,
+            failIfNotFound: false,
+            customTitle: `Get ${variable.displayName}`,
+            customDescription: `Retrieve ${variable.name} variable`,
+            comment: `Getting variable from: ${variable.nodeTitle}`,
+            colorTheme: "yellow"
+        }
+    }
+
+    console.log('Variable drag started:', getVariableNodeData);
+    event.dataTransfer.setData('application/nodeType', JSON.stringify(getVariableNodeData))
+    event.dataTransfer.effectAllowed = 'copy'
+}
+
 function addNodeToCenter(nodeType) {
     if (!nodeType) return;
 
@@ -1073,7 +1362,9 @@ function onDrop(event) {
     const nodeTypeData = event.dataTransfer.getData('application/nodeType');
     if (!nodeTypeData) return;
 
+    console.log('Drop data received:', nodeTypeData);
     const { type, initialData } = JSON.parse(nodeTypeData);
+    console.log('Parsed drop data - type:', type, 'initialData:', initialData);
 
     saveToHistory();
 
@@ -1089,6 +1380,8 @@ function onDrop(event) {
         data: { ...initialData },
         selected: true
     };
+
+    console.log('Creating new node:', newNode);
 
     nodes.value = nodes.value.map(node => ({ ...node, selected: false }));
 
@@ -1708,35 +2001,22 @@ function handleClickOutside(event) {
     }
 }
 
-// Add to existing reactive state
-const customSelection = reactive({
-    isSelecting: false,
-    startX: 0,
-    startY: 0,
-    currentX: 0,
-    currentY: 0,
-    startPosition: { x: 0, y: 0 },
-    currentPosition: { x: 0, y: 0 }
-});
+// Remove custom selection in favor of Vue Flow's built-in selection box
 
-// Add these new functions before your existing functions:
+// Ensure left-drag on pane makes a selection box, but not when starting on nodes/edges/handles
+function handleFlowMouseDown(event) {
+    // Only left button
+    if (event.button !== 0) return;
 
-function handleContextMenu(event) {
-    // Prevent context menu when Shift is held down
-    if (event.shiftKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        return false;
-    }
-}
+    // Ignore when starting from a node, edge, or handle so node dragging/connections still work
+    const target = event.target;
+    const isNodeArea = target?.closest?.('.vue-flow__node');
+    const isHandle = target?.closest?.('.vue-flow__handle');
+    const isEdge = target?.closest?.('.vue-flow__edge');
+    if (isNodeArea || isHandle || isEdge) return;
 
-function startCustomSelection(event) {
-    // Only start selection on Shift+Right-click
-    if (!event.shiftKey || event.button !== 2) return;
-
+    // Start our custom selection box for pane left-drag
     event.preventDefault();
-    event.stopPropagation();
-
     customSelection.isSelecting = true;
     customSelection.startX = event.clientX;
     customSelection.startY = event.clientY;
@@ -1751,82 +2031,18 @@ function startCustomSelection(event) {
     document.addEventListener('mouseup', endCustomSelection);
 }
 
-function updateCustomSelection(event) {
-    if (!customSelection.isSelecting) return;
-
-    customSelection.currentX = event.clientX;
-    customSelection.currentY = event.clientY;
-    customSelection.currentPosition = project({ x: event.clientX, y: event.clientY });
-}
-
-function endCustomSelection(event) {
-    if (!customSelection.isSelecting) return;
-
-    // Calculate selection bounds in flow coordinates
-    const minX = Math.min(customSelection.startPosition.x, customSelection.currentPosition.x);
-    const maxX = Math.max(customSelection.startPosition.x, customSelection.currentPosition.x);
-    const minY = Math.min(customSelection.startPosition.y, customSelection.currentPosition.y);
-    const maxY = Math.max(customSelection.startPosition.y, customSelection.currentPosition.y);
-
-    // Select nodes within the bounds
-    const selectedNodeIds = [];
-    nodes.value.forEach(node => {
-        const nodeX = node.position.x;
-        const nodeY = node.position.y;
-        const nodeWidth = 180; // Default node width from your CSS
-        const nodeHeight = 60; // Approximate node height
-
-        // Check if node overlaps with selection area
-        if (nodeX < maxX && nodeX + nodeWidth > minX &&
-            nodeY < maxY && nodeY + nodeHeight > minY) {
-            selectedNodeIds.push(node.id);
-        }
-    });
-
-    // Update selection
-    nodes.value = nodes.value.map(node => ({
-        ...node,
-        selected: selectedNodeIds.includes(node.id)
-    }));
-
-    selectedNodes.value = nodes.value.filter(node => selectedNodeIds.includes(node.id));
-
-    // Clean up
-    customSelection.isSelecting = false;
-    document.removeEventListener('mousemove', updateCustomSelection);
-    document.removeEventListener('mouseup', endCustomSelection);
-}
-
-function preventContextMenu(event) {
-    event.preventDefault();
-}
-
-// Add computed property for selection box style:
-const selectionBoxStyle = computed(() => {
-    if (!customSelection.isSelecting) return { display: 'none' };
-
-    const left = Math.min(customSelection.startX, customSelection.currentX);
-    const top = Math.min(customSelection.startY, customSelection.currentY);
-    const width = Math.abs(customSelection.currentX - customSelection.startX);
-    const height = Math.abs(customSelection.currentY - customSelection.startY);
-
-    return {
-        position: 'fixed',
-        left: `${left}px`,
-        top: `${top}px`,
-        width: `${width}px`,
-        height: `${height}px`,
-        border: '2px dashed #3b82f6',
-        background: 'rgba(59, 130, 246, 0.1)',
-        pointerEvents: 'none',
-        zIndex: 9999,
-        borderRadius: '4px'
-    };
-});
-
 // Load node components
 onMounted(async () => {
     try {
+        // Restore saved sidebar width
+        const savedWidth = localStorage.getItem('workflowEditor.sidebarWidth');
+        if (savedWidth) {
+            const width = parseInt(savedWidth, 10);
+            if (width >= minSidebarWidth && width <= maxSidebarWidth) {
+                sidebarWidth.value = width;
+            }
+        }
+
         const defaultNodeFiles = import.meta.glob('./nodes/*.vue', { eager: true });
 
         for (const path in defaultNodeFiles) {
@@ -1835,6 +2051,8 @@ onMounted(async () => {
             const module = defaultNodeFiles[path];
 
             nodeComponents[nodeType] = markRaw(module.default);
+
+            console.log(`Loaded node: ${fileName} -> ${nodeType}`); // Debug loaded node types
 
             const metadata = module.default?.nodeMetadata || {
                 category: 'Other',
@@ -1859,6 +2077,12 @@ onMounted(async () => {
         await loadSavedDiagrams();
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('click', handleClickOutside);
+        // Right-drag panning listener on the flow root
+        const rootEl = document.querySelector('.workflow-canvas');
+        if (rootEl) {
+            rootEl.addEventListener('mousedown', onRootMouseDown); // no capture, right-button only
+            // Context menu already prevented on wrapper via @contextmenu.prevent
+        }
         saveToHistory();
 
         // Initialize breakpoint callback
@@ -1875,12 +2099,47 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     document.removeEventListener('keydown', handleKeyDown);
     document.removeEventListener('click', handleClickOutside);
+    // Clean up resize listeners if still active
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', stopResize);
+    // Clean up panning listeners
+    const rootEl = document.querySelector('.workflow-canvas');
+    if (rootEl) {
+        rootEl.removeEventListener('mousedown', onRootMouseDown);
+    }
+    window.removeEventListener('mousemove', onRootMouseMove);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
 });
 </script>
 
 <style scoped>
 .workflow-canvas {
     background: #0a0a0a !important;
+}
+
+.workflow-canvas.panning-right {
+    cursor: grabbing !important;
+}
+
+/* Resize handle styling */
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+.resize-handle.active {
+    background: rgba(59, 130, 246, 0.8);
 }
 
 /* Enhanced node styling with better selection visibility */
@@ -2143,23 +2402,7 @@ textarea:focus {
     outline-offset: 2px;
 }
 
-.custom-selection-box {
-    border: 2px dashed #3b82f6;
-    background: rgba(59, 130, 246, 0.1);
-    backdrop-filter: blur(2px);
-    animation: selectionPulse 1s ease-in-out infinite;
-}
-
-@keyframes selectionPulse {
-    0%, 100% {
-        border-color: #3b82f6;
-        background: rgba(59, 130, 246, 0.1);
-    }
-    50% {
-        border-color: #6366f1;
-        background: rgba(99, 102, 241, 0.15);
-    }
-}
+/* Using Vue Flow's built-in selection box styles */
 
 .vue-flow__node.has-breakpoint::after {
     content: '';
