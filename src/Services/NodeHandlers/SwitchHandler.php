@@ -38,7 +38,19 @@ class SwitchHandler extends BaseNodeHandler
                 'comparisonMode' => $comparisonMode,
                 'extractedValue' => $switchExpression, // For edge routing
                 'caseCount' => count($cases),
-                'isDefaultCase' => isset($matchedCase['isDefault']) && $matchedCase['isDefault']
+                'isDefaultCase' => isset($matchedCase['isDefault']) && $matchedCase['isDefault'],
+                // ✨ NEW: Enhanced simulation debugging
+                'simulationDebug' => [
+                    'evaluatedValue' => $switchExpression,
+                    'evaluatedType' => gettype($switchExpression),
+                    'selectedCaseIndex' => $selectedCase,
+                    'selectedCaseValue' => $matchedCase['value'] ?? null,
+                    'totalCases' => count($cases),
+                    'comparisonMode' => $comparisonMode,
+                    'caseSensitive' => $caseSensitive,
+                    'useExtractedValue' => $useExtractedValue,
+                    'matchingStrategy' => $matchType
+                ]
             ];
 
             // ✨ NEW: Add case description if available
@@ -582,6 +594,136 @@ class SwitchHandler extends BaseNodeHandler
                 'Cases are ordered by usage frequency (most frequent first)',
                 'This reduces average comparison time for frequently matched cases',
                 'Default case remains at the end as expected'
+            ]
+        ];
+    }
+
+    /**
+     * ✨ NEW: Enhanced simulation support methods
+     */
+    public function getSimulationInfo(array $node, array $variables): array
+    {
+        $switchValue = $this->getSwitchValue($node, $variables);
+        $cases = $this->getData($node, 'cases', []);
+        $comparisonMode = $this->getData($node, 'comparisonMode', 'exact');
+        $caseSensitive = $this->getData($node, 'caseSensitive', true);
+        $useExtractedValue = $this->getData($node, 'useExtractedValue', true);
+
+        $matchResult = $this->findMatchingCase($switchValue, $cases, $comparisonMode, $caseSensitive);
+
+        return [
+            'switch_expression' => $switchValue,
+            'switch_type' => gettype($switchValue),
+            'switch_string_value' => $this->convertToString($switchValue),
+            'predicted_case' => $matchResult['index'] ?? null,
+            'predicted_match_type' => $matchResult['type'] ?? 'none',
+            'total_cases' => count($cases),
+            'non_default_cases' => count(array_filter($cases, fn($case) => !($case['isDefault'] ?? false))),
+            'has_default_case' => count(array_filter($cases, fn($case) => $case['isDefault'] ?? false)) > 0,
+            'comparison_mode' => $comparisonMode,
+            'case_sensitive' => $caseSensitive,
+            'using_extracted_value' => $useExtractedValue,
+            'case_previews' => array_map(function ($case, $index) use ($switchValue, $comparisonMode, $caseSensitive) {
+                $isDefault = $case['isDefault'] ?? false;
+                $value = $case['value'] ?? '';
+
+                return [
+                    'index' => $index,
+                    'value' => $value,
+                    'is_default' => $isDefault,
+                    'would_match' => $isDefault ? false : $this->performComparison(
+                        $this->convertToString($switchValue),
+                        $value,
+                        $comparisonMode,
+                        $caseSensitive
+                    ),
+                    'description' => $case['description'] ?? ''
+                ];
+            }, $cases, array_keys($cases))
+        ];
+    }
+
+    /**
+     * ✨ NEW: Provide real-time simulation feedback
+     */
+    public function getSimulationPreview(array $node, array $variables): array
+    {
+        $simulationInfo = $this->getSimulationInfo($node, $variables);
+        $predictedCase = $simulationInfo['predicted_case'];
+        $cases = $this->getData($node, 'cases', []);
+
+        $preview = [
+            'will_execute' => true,
+            'predicted_output' => $predictedCase,
+            'predicted_path' => $predictedCase !== null ? "Case {$predictedCase}" : 'No matching case',
+            'switch_value_preview' => $simulationInfo['switch_string_value'],
+            'match_confidence' => $predictedCase !== null ? 'high' : 'low',
+            'execution_summary' => '',
+            'debug_info' => $simulationInfo
+        ];
+
+        if ($predictedCase !== null && isset($cases[$predictedCase])) {
+            $matchedCase = $cases[$predictedCase];
+            $isDefault = $matchedCase['isDefault'] ?? false;
+
+            if ($isDefault) {
+                $preview['execution_summary'] = "Will follow default case path";
+                $preview['predicted_path'] = "Default Case";
+            } else {
+                $caseValue = $matchedCase['value'] ?? '';
+                $preview['execution_summary'] = "Will match case '{$caseValue}' and follow path {$predictedCase}";
+                $preview['predicted_path'] = "Case {$predictedCase}: {$caseValue}";
+            }
+        } else {
+            $preview['execution_summary'] = "No matching case found - workflow may stop here";
+            $preview['will_execute'] = false;
+        }
+
+        return $preview;
+    }
+
+    /**
+     * ✨ NEW: Enhanced error reporting for simulation
+     */
+    public function validateForSimulation(array $node): array
+    {
+        $validation = $this->validateSwitchConfiguration($node);
+        $cases = $this->getData($node, 'cases', []);
+        $useExtractedValue = $this->getData($node, 'useExtractedValue', true);
+        $switchExpression = $this->getData($node, 'switchExpression', '');
+
+        // Additional simulation-specific validations
+        $simulationErrors = [];
+        $simulationWarnings = [];
+
+        // Check for edge connectivity
+        $hasOutputConnections = false; // This would need to be checked by the frontend
+
+        // Check for unreachable cases
+        $hasOnlyDefaultCase = count($cases) === 1 && ($cases[0]['isDefault'] ?? false);
+        if ($hasOnlyDefaultCase) {
+            $simulationWarnings[] = 'Only default case defined - switch will always take the same path';
+        }
+
+        // Check for empty case values
+        $emptyCases = array_filter($cases, function ($case, $index) {
+            return !($case['isDefault'] ?? false) && empty($case['value'] ?? '');
+        }, ARRAY_FILTER_USE_BOTH);
+
+        if (!empty($emptyCases)) {
+            $simulationErrors[] = 'Some cases have empty values and will never match';
+        }
+
+        return [
+            'simulation_ready' => empty($simulationErrors),
+            'configuration_valid' => $validation['valid'],
+            'errors' => array_merge($validation['errors'], $simulationErrors),
+            'warnings' => array_merge($validation['warnings'], $simulationWarnings),
+            'simulation_notes' => [
+                'Switch nodes require at least one case to be meaningful',
+                'Default cases will match when no other cases match',
+                'Case matching follows the configured comparison mode',
+                'Edge handles should be connected to specify execution paths'
             ]
         ];
     }

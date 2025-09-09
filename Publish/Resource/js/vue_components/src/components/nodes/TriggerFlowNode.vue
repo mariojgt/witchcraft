@@ -144,26 +144,153 @@
 
         <!-- Content -->
         <div class="space-y-4">
+            <!-- ✨ NEW: Trigger Code Input (Preferred Method) -->
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">
+                    Trigger Code (Recommended)
+                    <span class="text-pink-400 ml-1">●</span>
+                </label>
+                <input v-model="data.triggerCode"
+                       placeholder="e.g., FLOW_XP_CALCULATION"
+                       class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:bg-white/10 focus:border-pink-500/50 focus:ring-2 focus:ring-pink-500/20 transition-all duration-200 outline-none" />
+                <div class="text-xs text-pink-400/70">
+                    ✨ Automatically uses the latest version of the flow
+                </div>
+            </div>
+
             <!-- Flow Selection -->
             <div class="space-y-2">
-                <label class="block text-xs font-medium text-gray-300 tracking-wide">Target Flow</label>
-                <div class="relative">
-                    <input v-model="flowSearchQuery" @input="searchFlows" @focus="showFlowDropdown = true" placeholder="Search and select flow..." class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 pr-10 text-white placeholder-gray-500 focus:bg-white/10 focus:border-pink-500/50 focus:ring-2 focus:ring-pink-500/20 transition-all duration-200 outline-none" />
-                    <SearchIcon class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                <label class="block text-xs font-medium text-gray-300 tracking-wide">
+                    Or Search Flows
+                </label>
+                <div class="relative flow-search-container">
+                    <input
+                        v-model="flowSearchQuery"
+                        @input="searchFlows"
+                        @focus="focusSearch"
+                        @keydown="handleKeydown"
+                        :placeholder="data.selectedFlow ? data.selectedFlow.name : 'Search flows by name, description, or ID...'"
+                        class="w-full text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 pr-20 text-white placeholder-gray-500 focus:bg-white/10 focus:border-pink-500/50 focus:ring-2 focus:ring-pink-500/20 transition-all duration-200 outline-none"
+                    />
 
-                    <!-- Dropdown with search results -->
-                    <div v-if="showFlowDropdown && filteredFlows.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl z-50 max-h-40 overflow-y-auto">
-                        <div v-for="flow in filteredFlows" :key="flow.id" @click="selectFlow(flow)" class="p-3 hover:bg-white/10 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200">
-                            <div class="font-medium text-white">{{ flow.name }}</div>
-                            <div class="text-xs text-gray-400">ID: {{ flow.id }} • {{ flow.description || 'No description' }}</div>
+                    <!-- Loading indicator -->
+                    <div v-if="isLoadingFlows" class="absolute right-3 top-3">
+                        <div class="w-4 h-4 border-2 border-gray-400 border-t-pink-500 rounded-full animate-spin"></div>
+                    </div>
+                    <!-- Search icon -->
+                    <SearchIcon v-else class="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+
+                    <!-- Clear button -->
+                    <button
+                        v-if="flowSearchQuery && !isLoadingFlows"
+                        @click="clearSelection"
+                        class="absolute right-8 top-3 w-4 h-4 text-gray-400 hover:text-white transition-colors"
+                    >
+                        <XIcon class="w-4 h-4" />
+                    </button>
+
+                    <!-- Enhanced Dropdown with search results -->
+                    <div
+                        v-if="showFlowDropdown"
+                        ref="dropdownRef"
+                        class="absolute top-full left-0 right-0 mt-1 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto"
+                    >
+                        <!-- Search results -->
+                        <div v-if="filteredFlows.length > 0">
+                            <!-- Search hint -->
+                            <div v-if="!flowSearchQuery.trim()" class="px-3 py-2 text-xs text-gray-400 border-b border-white/10">
+                                Recently used and popular flows
+                            </div>
+                            <div v-else class="px-3 py-2 text-xs text-gray-400 border-b border-white/10">
+                                {{ filteredFlows.length }} result{{ filteredFlows.length !== 1 ? 's' : '' }} found
+                            </div>
+
+                            <div
+                                v-for="(flow, index) in filteredFlows"
+                                :key="flow.id"
+                                :data-index="index"
+                                @click="selectFlow(flow)"
+                                @mouseenter="selectedIndex = index"
+                                :class="{
+                                    'p-3 cursor-pointer border-b border-white/10 last:border-b-0 transition-all duration-200': true,
+                                    'selected-item': selectedIndex === index
+                                }"
+                            >
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium text-white truncate">{{ flow.name }}</div>
+                                        <div class="text-xs text-gray-400 mt-0.5">
+                                            <span v-if="flow.trigger_code" class="text-pink-400 font-mono">{{ flow.trigger_code }}</span>
+                                            <span v-if="flow.trigger_code && flow.id" class="mx-1">•</span>
+                                            <span v-if="flow.id">ID: {{ flow.id }}</span>
+                                            <span v-if="flow.category" class="mx-1">•</span>
+                                            <span v-if="flow.category" class="text-pink-400">{{ flow.category }}</span>
+                                        </div>
+                                        <div v-if="flow.description" class="text-xs text-gray-500 mt-1 line-clamp-2">
+                                            {{ flow.description }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Flow status indicators -->
+                                    <div class="flex items-center gap-1 ml-2">
+                                        <div v-if="flow.is_active === false" class="w-2 h-2 bg-red-500 rounded-full" title="Inactive"></div>
+                                        <div v-if="flow.usage_count > 10" class="w-2 h-2 bg-green-500 rounded-full" title="Popular"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No results -->
+                        <div v-else-if="!isLoadingFlows && flowSearchQuery.trim()" class="p-4 text-center text-gray-400">
+                            <div class="text-sm">No flows found</div>
+                            <div class="text-xs mt-1">Try searching by name, description, or ID</div>
+                        </div>
+
+                        <!-- Error state -->
+                        <div v-else-if="searchError" class="p-4 text-center text-red-400">
+                            <div class="text-sm">{{ searchError }}</div>
+                            <button @click="loadFlows()" class="text-xs mt-1 text-pink-400 hover:text-pink-300">
+                                Try again
+                            </button>
+                        </div>
+
+                        <!-- Loading state -->
+                        <div v-else-if="isLoadingFlows" class="p-4 text-center text-gray-400">
+                            <div class="text-sm">Loading flows...</div>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div v-else class="p-4 text-center text-gray-400">
+                            <div class="text-sm">No flows available</div>
+                            <div class="text-xs mt-1">Create some flows to see them here</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Selected flow display -->
+                <!-- Enhanced Selected flow display -->
                 <div v-if="data.selectedFlow" class="bg-white/5 border border-white/10 rounded-lg p-3">
-                    <div class="text-sm font-medium text-pink-400">Selected: {{ data.selectedFlow.name }}</div>
-                    <div class="text-xs text-gray-400">ID: {{ data.selectedFlow.id }}</div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-pink-400 truncate">{{ data.selectedFlow.name }}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">
+                                <span v-if="data.selectedFlow.trigger_code" class="text-pink-400 font-mono">{{ data.selectedFlow.trigger_code }}</span>
+                                <span v-if="data.selectedFlow.trigger_code && data.selectedFlow.id" class="mx-1">•</span>
+                                <span v-if="data.selectedFlow.id">ID: {{ data.selectedFlow.id }}</span>
+                                <span v-if="data.selectedFlow.category" class="mx-1">•</span>
+                                <span v-if="data.selectedFlow.category">{{ data.selectedFlow.category }}</span>
+                            </div>
+                            <div v-if="data.selectedFlow.description" class="text-xs text-gray-500 mt-1 line-clamp-2">
+                                {{ data.selectedFlow.description }}
+                            </div>
+                        </div>
+                        <button
+                            @click="clearSelection"
+                            class="ml-2 w-6 h-6 rounded hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors flex items-center justify-center"
+                            title="Clear selection"
+                        >
+                            <XIcon class="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -213,6 +340,35 @@
                     <span class="text-sm text-gray-300 group-hover:text-white transition-colors">Async Execution</span>
                 </label>
             </div>
+
+            <!-- ✨ NEW: Flow Configuration Status -->
+            <div v-if="flowIdentificationInfo.method !== 'none'" class="bg-white/5 border border-white/10 rounded-lg p-3">
+                <div class="text-xs text-gray-400 mb-2">
+                    <span class="text-gray-300 font-medium">Configuration Status:</span>
+                </div>
+
+                <div class="text-sm text-pink-400 mb-1">{{ getFlowDescription }}</div>
+
+                <div class="text-xs text-gray-500">
+                    Method: {{ flowIdentificationInfo.description }}
+                </div>
+
+                <!-- Priority indicator -->
+                <div class="flex items-center gap-2 mt-2">
+                    <div class="text-xs">Priority:</div>
+                    <div class="flex gap-1">
+                        <div v-for="i in 4" :key="i"
+                             :class="`w-2 h-2 rounded-full transition-colors ${
+                                 i <= flowIdentificationInfo.priority
+                                     ? (flowIdentificationInfo.isLatestVersion ? 'bg-green-500' : 'bg-yellow-500')
+                                     : 'bg-gray-600'
+                             }`"></div>
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        {{ flowIdentificationInfo.isLatestVersion ? '(Latest Version ✨)' : '(Specific Version)' }}
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Connection Points -->
@@ -240,6 +396,9 @@ const flowSearchQuery = ref('')
 const showFlowDropdown = ref(false)
 const availableFlows = ref([])
 const isLoadingFlows = ref(false)
+const searchError = ref('')
+const selectedIndex = ref(-1)
+const dropdownRef = ref(null)
 
 // UI state
 const showComment = ref(false)
@@ -334,60 +493,306 @@ const availableVariables = computed(() => {
     return Object.keys(props.variables)
 })
 
+// ✨ NEW: Flow identification status
+const flowIdentificationInfo = computed(() => {
+    const info = {
+        method: 'none',
+        value: '',
+        description: 'No flow specified',
+        isLatestVersion: false,
+        priority: 0
+    }
+
+    if (props.data.triggerCode) {
+        info.method = 'triggerCode'
+        info.value = props.data.triggerCode
+        info.description = 'Using trigger code (always latest version)'
+        info.isLatestVersion = true
+        info.priority = 1
+    } else if (props.data.selectedFlow?.trigger_code) {
+        info.method = 'selectedFlow.triggerCode'
+        info.value = props.data.selectedFlow.trigger_code
+        info.description = 'Using selected flow trigger code (latest version)'
+        info.isLatestVersion = true
+        info.priority = 2
+    } else if (props.data.selectedFlow?.id) {
+        info.method = 'selectedFlow.id'
+        info.value = props.data.selectedFlow.id
+        info.description = 'Using selected flow ID (specific version)'
+        info.isLatestVersion = false
+        info.priority = 3
+    } else if (props.data.flowId) {
+        info.method = 'flowId'
+        info.value = props.data.flowId
+        info.description = 'Using flow ID (specific version, legacy)'
+        info.isLatestVersion = false
+        info.priority = 4
+    }
+
+    return info
+})
+
+// ✨ NEW: Get description for UI display
+const getFlowDescription = computed(() => {
+    const info = flowIdentificationInfo.value
+
+    if (info.method === 'none') {
+        return 'No flow configured'
+    }
+
+    let description = ''
+    if (props.data.selectedFlow?.name) {
+        description = `Will execute: ${props.data.selectedFlow.name}`
+    } else if (info.method === 'triggerCode') {
+        description = `Will execute flow with code: ${info.value}`
+    } else {
+        description = `Will execute flow ID: ${info.value}`
+    }
+
+    if (info.isLatestVersion) {
+        description += ' (latest version ✨)'
+    } else {
+        description += ' (specific version)'
+    }
+
+    return description
+})
+
 // Load available flows on mount
 onMounted(async () => {
     await loadFlows()
     document.addEventListener('click', handleClickOutside)
+
+    // Initialize search field if flow is already selected
+    if (props.data.selectedFlow && props.data.selectedFlow.name) {
+        flowSearchQuery.value = props.data.selectedFlow.name
+    } else if (props.data.triggerCode) {
+        // ✨ NEW: Try to find flow by trigger code first
+        const flow = availableFlows.value.find(f => f.trigger_code === props.data.triggerCode)
+        if (flow) {
+            props.data.selectedFlow = flow
+            flowSearchQuery.value = flow.name
+        }
+    } else if (props.data.flowId && !props.data.selectedFlow) {
+        // Try to find the flow by ID if we have an ID but no selected flow object
+        const flow = availableFlows.value.find(f => f.id == props.data.flowId)
+        if (flow) {
+            props.data.selectedFlow = flow
+            flowSearchQuery.value = flow.name
+        }
+    }
 })
 
 // Load flows from API
 const loadFlows = async () => {
     try {
         isLoadingFlows.value = true
-        const response = await fetch('/api/witchcraft/diagrams')
+        searchError.value = ''
+
+        // Try the enhanced endpoint first, fallback to regular diagrams
+        let response
+        try {
+            response = await fetch('/api/witchcraft/diagrams-for-selection')
+        } catch (error) {
+            console.debug('Enhanced endpoint not available, using fallback')
+            response = await fetch('/api/witchcraft/diagrams')
+        }
+
         if (response.ok) {
-            availableFlows.value = await response.json()
+            const data = await response.json()
+            availableFlows.value = Array.isArray(data) ? data : (data.data || [])
+
+            // Enrich data if basic endpoint was used
+            if (!availableFlows.value[0]?.usage_count) {
+                availableFlows.value = availableFlows.value.map(flow => ({
+                    ...flow,
+                    usage_count: 0,
+                    last_used_at: null
+                }))
+            }
+        } else {
+            searchError.value = `Failed to load flows (${response.status})`
+            availableFlows.value = []
         }
     } catch (error) {
         console.error('Failed to load flows:', error)
+        searchError.value = 'Network error while loading flows'
+        availableFlows.value = []
     } finally {
         isLoadingFlows.value = false
     }
 }
 
-// Computed filtered flows
-const filteredFlows = computed(() => {
-    if (!flowSearchQuery.value) return availableFlows.value.slice(0, 10) // Show first 10 if no search
+// Enhanced search scoring function
+const getSearchScore = (flow, query) => {
+    const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0)
+    let score = 0
 
-    const query = flowSearchQuery.value.toLowerCase()
-    return availableFlows.value.filter(flow =>
-        flow.name.toLowerCase().includes(query) ||
-        flow.description?.toLowerCase().includes(query) ||
-        flow.id.toString().includes(query)
-    ).slice(0, 10) // Limit to 10 results
+    searchTerms.forEach(term => {
+        // Exact match in name gets highest score
+        if (flow.name.toLowerCase() === term) score += 100
+        // Name starts with term gets high score
+        else if (flow.name.toLowerCase().startsWith(term)) score += 50
+        // Name contains term gets medium score
+        else if (flow.name.toLowerCase().includes(term)) score += 20
+
+        // Description matches get lower scores
+        if (flow.description && flow.description.toLowerCase().includes(term)) score += 10
+
+        // Category matches
+        if (flow.category && flow.category.toLowerCase().includes(term)) score += 15
+
+        // ID exact match gets high score
+        if (flow.id.toString() === term) score += 80
+        // ID starts with term
+        else if (flow.id.toString().startsWith(term)) score += 40
+    })
+
+    return score
+}
+
+// Computed filtered flows with enhanced search
+const filteredFlows = computed(() => {
+    if (!flowSearchQuery.value.trim()) {
+        // When no search query, show recent or popular flows first
+        return availableFlows.value
+            .sort((a, b) => {
+                // Prioritize flows with recent activity or higher usage
+                const aScore = (a.last_used_at ? 10 : 0) + (a.usage_count || 0)
+                const bScore = (b.last_used_at ? 10 : 0) + (b.usage_count || 0)
+                return bScore - aScore
+            })
+            .slice(0, 8)
+    }
+
+    const query = flowSearchQuery.value.trim()
+
+    // Score and filter flows
+    const scoredFlows = availableFlows.value
+        .map(flow => ({
+            ...flow,
+            searchScore: getSearchScore(flow, query)
+        }))
+        .filter(flow => flow.searchScore > 0)
+        .sort((a, b) => b.searchScore - a.searchScore)
+        .slice(0, 10)
+
+    return scoredFlows
 })
 
-// Search flows (debounced)
+// Search flows (debounced with better UX)
 let searchTimeout
 const searchFlows = () => {
     clearTimeout(searchTimeout)
+    selectedIndex.value = -1 // Reset selection
+
     searchTimeout = setTimeout(() => {
+        // Show dropdown for any input, even empty (to show popular flows)
         showFlowDropdown.value = true
-    }, 300)
+    }, 150) // Reduced debounce time for better responsiveness
+}
+
+// Handle keyboard navigation
+const handleKeydown = (event) => {
+    if (!showFlowDropdown.value || filteredFlows.value.length === 0) return
+
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault()
+            selectedIndex.value = Math.min(selectedIndex.value + 1, filteredFlows.value.length - 1)
+            scrollToSelected()
+            break
+        case 'ArrowUp':
+            event.preventDefault()
+            selectedIndex.value = Math.max(selectedIndex.value - 1, -1)
+            scrollToSelected()
+            break
+        case 'Enter':
+            event.preventDefault()
+            if (selectedIndex.value >= 0 && selectedIndex.value < filteredFlows.value.length) {
+                selectFlow(filteredFlows.value[selectedIndex.value])
+            }
+            break
+        case 'Escape':
+            event.preventDefault()
+            closeDropdown()
+            break
+    }
+}
+
+// Scroll to selected item in dropdown
+const scrollToSelected = () => {
+    nextTick(() => {
+        const dropdown = dropdownRef.value
+        if (!dropdown) return
+
+        const selectedElement = dropdown.querySelector(`[data-index="${selectedIndex.value}"]`)
+        if (selectedElement) {
+            selectedElement.scrollIntoView({ block: 'nearest' })
+        }
+    })
+}
+
+// Close dropdown
+const closeDropdown = () => {
+    showFlowDropdown.value = false
+    selectedIndex.value = -1
+}
+
+// Focus search input
+const focusSearch = () => {
+    showFlowDropdown.value = true
+    if (flowSearchQuery.value.trim().length === 0 && availableFlows.value.length > 0) {
+        // Show popular flows when focusing empty search
+        showFlowDropdown.value = true
+    }
 }
 
 // Select flow from dropdown
 const selectFlow = (flow) => {
     props.data.selectedFlow = flow
-    props.data.flowId = flow.id
+    // ✨ NEW: Set trigger_code if available, otherwise fallback to id
+    if (flow.trigger_code) {
+        props.data.triggerCode = flow.trigger_code
+        props.data.flowId = flow.id // Keep for display purposes
+    } else {
+        props.data.flowId = flow.id
+        props.data.triggerCode = '' // Clear trigger code if not available
+    }
     flowSearchQuery.value = flow.name
-    showFlowDropdown.value = false
+    closeDropdown()
+
+    // Update usage tracking (if available)
+    updateFlowUsage(flow.id)
+}
+
+// Update flow usage for better recommendations
+const updateFlowUsage = async (flowId) => {
+    try {
+        await fetch(`/api/witchcraft/diagrams/${flowId}/usage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+    } catch (error) {
+        // Silent fail - this is just for analytics
+        console.debug('Failed to update flow usage:', error)
+    }
+}
+
+// Clear selection
+const clearSelection = () => {
+    props.data.selectedFlow = null
+    props.data.flowId = ''
+    props.data.triggerCode = '' // ✨ NEW: Clear trigger code too
+    flowSearchQuery.value = ''
+    closeDropdown()
 }
 
 // Close dropdown when clicking outside
 const handleClickOutside = (event) => {
-    if (!event.target.closest('.relative')) {
-        showFlowDropdown.value = false
+    const searchContainer = event.target.closest('.flow-search-container')
+    if (!searchContainer) {
+        closeDropdown()
     }
 }
 
@@ -397,6 +802,7 @@ defineOptions({
         icon: WorkflowIcon,
         label: 'Trigger Flow',
         initialData: {
+            triggerCode: '', // ✨ NEW: Trigger code (preferred)
             flowId: '',
             selectedFlow: null,
             inputVariable: 'status',
@@ -518,5 +924,97 @@ defineOptions({
         right: 12px;
         transform: translateX(0);
     }
+}
+
+/* Enhanced search dropdown styles */
+.flow-search-container .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(236, 72, 153, 0.3) transparent;
+}
+
+.flow-search-container .overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.flow-search-container .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.flow-search-container .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(236, 72, 153, 0.3);
+    border-radius: 3px;
+}
+
+.flow-search-container .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(236, 72, 153, 0.5);
+}
+
+/* Line clamp utility for text truncation */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Search result highlighting */
+.flow-search-container [data-index] {
+    position: relative;
+}
+
+.flow-search-container [data-index].selected-item {
+    background-color: rgba(236, 72, 153, 0.15) !important;
+    border-left: 3px solid #ec4899;
+}
+
+.flow-search-container [data-index].selected-item .font-medium {
+    color: #fbbf24 !important; /* Yellow highlight for selected text */
+}
+
+.flow-search-container [data-index]:hover:not(.selected-item) {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Better visibility for dropdown items */
+.flow-search-container [data-index] {
+    backdrop-filter: blur(8px);
+}
+
+.flow-search-container [data-index] .font-medium {
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+/* Improved loading spinner */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Better focus states for accessibility */
+.flow-search-container input:focus {
+    box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2);
+}
+
+.flow-search-container button:focus {
+    outline: 2px solid rgba(236, 72, 153, 0.5);
+    outline-offset: 2px;
+}
+
+/* Smooth transitions for interactive elements */
+.flow-search-container button,
+.flow-search-container [data-index] {
+    transition: all 0.15s ease-in-out;
+}
+
+/* Status indicator styles */
+.flow-search-container .w-2.h-2 {
+    box-shadow: 0 0 4px currentColor;
 }
 </style>
