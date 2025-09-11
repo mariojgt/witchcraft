@@ -386,41 +386,50 @@ export default class SimulationService {
             nodeOutputKeys: Object.keys(nodeResult.output || {})
         };
 
+        // Normalize handle for robust comparisons (true/false, yes/no, 1/0, case-insensitive)
+        const rawHandle = (edge.sourceHandle ?? '').toString().trim();
+        const handle = rawHandle.toLowerCase();
+        const normBoolHandle = (() => {
+            if (["true", "t", "yes", "y", "1"].includes(handle)) return 'true';
+            if (["false", "f", "no", "n", "0"].includes(handle)) return 'false';
+            return handle; // keep as-is for switch cases or custom labels
+        })();
+
         // Handle different types of conditional results
         if ('conditionResult' in nodeResult) {
             // Boolean condition (if/else nodes)
-            const result = edge.sourceHandle === (nodeResult.conditionResult ? 'true' : 'false');
-            this.addLog(`🔀 Conditional edge check: handle="${edge.sourceHandle}", condition=${nodeResult.conditionResult}, following=${result}`, 'info');
+            const result = normBoolHandle === (nodeResult.conditionResult ? 'true' : 'false');
+            this.addLog(`🔀 Conditional edge check: handle="${rawHandle}"(norm=${normBoolHandle}), condition=${nodeResult.conditionResult}, following=${result}`, 'info');
             return result;
         }
 
         if ('conditionResult' in (nodeResult.output || {})) {
             // Boolean condition in output
-            const result = edge.sourceHandle === (nodeResult.output.conditionResult ? 'true' : 'false');
-            this.addLog(`🔀 Conditional edge check (output): handle="${edge.sourceHandle}", condition=${nodeResult.output.conditionResult}, following=${result}`, 'info');
+            const result = normBoolHandle === (nodeResult.output.conditionResult ? 'true' : 'false');
+            this.addLog(`🔀 Conditional edge check (output): handle="${rawHandle}"(norm=${normBoolHandle}), condition=${nodeResult.output.conditionResult}, following=${result}`, 'info');
             return result;
         }
 
         if ('selectedCase' in nodeResult) {
             // Switch/case nodes
             const selectedCase = nodeResult.selectedCase;
-            const handleCase = parseInt(edge.sourceHandle);
+            const handleCase = parseInt(rawHandle);
             const result = handleCase === (selectedCase ?? null);
-            this.addLog(`🔀 Switch case edge check: handle=${edge.sourceHandle} (${handleCase}), selectedCase=${selectedCase}, following=${result}`, 'info');
+            this.addLog(`🔀 Switch case edge check: handle=${rawHandle} (${handleCase}), selectedCase=${selectedCase}, following=${result}`, 'info');
             return result;
         }
 
         if ('selectedCase' in (nodeResult.output || {})) {
             // Switch/case in output
             const selectedCase = nodeResult.output.selectedCase;
-            const handleCase = parseInt(edge.sourceHandle);
+            const handleCase = parseInt(rawHandle);
             const result = handleCase === (selectedCase ?? null);
-            this.addLog(`🔀 Switch case edge check (output): handle=${edge.sourceHandle} (${handleCase}), selectedCase=${selectedCase}, following=${result}`, 'info');
+            this.addLog(`🔀 Switch case edge check (output): handle=${rawHandle} (${handleCase}), selectedCase=${selectedCase}, following=${result}`, 'info');
             return result;
         }
 
         // For non-conditional nodes, follow all edges
-        this.addLog(`🔀 Non-conditional edge: following edge with handle="${edge.sourceHandle}"`, 'info');
+    this.addLog(`🔀 Non-conditional edge: following edge with handle="${rawHandle}"`, 'info');
         return true;
     }
 
@@ -527,10 +536,14 @@ export default class SimulationService {
             return;
         }
 
-        // Classification helpers
-        const type = (node.type || '').toLowerCase();
-        const isSwitch = type === 'switchcase' || type === 'switch' || type === 'switch_node';
-        const isIf = type === 'ifcondition' || type === 'if' || type === 'condition';
+    // Classification helpers
+    const type = (node.type || '').toLowerCase();
+    // Detect presence of conditional outputs even if type label is custom (e.g., DateConditionNode)
+    const hasBooleanCondition = ('conditionResult' in safeResult) || ('conditionResult' in (safeResult.output || {}));
+    const hasSwitchCase = ('selectedCase' in safeResult) || ('selectedCase' in (safeResult.output || {}));
+    const isSwitch = type === 'switchcase' || type === 'switch' || type === 'switch_node' || hasSwitchCase;
+    // Be flexible: treat any node containing "condition" in its type or exposing conditionResult as IF-like
+    const isIf = type === 'ifcondition' || type === 'if' || type === 'condition' || type.endsWith('conditionnode') || type.includes('condition') || hasBooleanCondition;
         const isTriggerFlow = type === 'triggerflow' || type === 'triggerflownode';
 
         this.addLog(`🔀 Evaluating ${outgoingEdges.length} outgoing edge(s) from ${node.id} (${node.type})`, 'info');
@@ -552,10 +565,10 @@ export default class SimulationService {
         }
 
         // Context logging for conditional nodes
-        if (isSwitch) {
+    if (isSwitch) {
             const selectedCase = safeResult.selectedCase ?? safeResult.output?.selectedCase;
             this.addLog(`🎯 Switch node: selectedCase=${selectedCase}`, 'info');
-        } else if (isIf) {
+    } else if (isIf) {
             const conditionResult = safeResult.conditionResult ?? safeResult.output?.conditionResult;
             this.addLog(`🎯 IF node: conditionResult=${conditionResult}`, 'info');
         }
